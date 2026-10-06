@@ -1,0 +1,22 @@
+diff --git a/src/main/java/com/example/preferences/controller/GlobalPollingConfigController.java b/src/main/java/com/example/preferences/controller/GlobalPollingConfigController.java
+new file mode 100644
+index 0000000..fa5f2ec
+--- /dev/null
++++ b/src/main/java/com/example/preferences/controller/GlobalPollingConfigController.java
+@@ -0,0 +1,16 @@
++package com.example.preferences.controller;
++
++import org.springframework.web.bind.annotation.*;
++import java.util.Map;
++
++@RestController
++@RequestMapping("/api/config")
++public class GlobalPollingConfigController {
++    private int globalPollingIntervalSeconds = 300;
++
++    @PutMapping("/global-polling-interval")
++    public Map<String, Integer> updateGlobalPollingInterval(@RequestBody Map<String, Integer> request) {
++        globalPollingIntervalSeconds = request.get("pollingIntervalSeconds");
++        return Map.of("pollingIntervalSeconds", globalPollingIntervalSeconds);
++    }
++}
