@@ -1,3 +1,27 @@
 {
-  "mcpServers": {}
+  "mcpServers": {
+    "github": {
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_TOKEN}",
+        "X-MCP-Tools": "pull_request_read,issue_read,add_issue_comment"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "pull_request_read",
+        "issue_read",
+        "add_issue_comment"
+      ]
+    },
+    "project-knowledge": {
+      "url": "https://prreviewagentcore-prreviewgateway-6tdiyooexa.gateway.bedrock-agentcore.us-east-2.amazonaws.com/mcp",
+      "disabled": false,
+      "autoApprove": [
+        "ProjectDocsLambdaTarget___search_project_docs"
+      ],
+      "disabledTools": [
+        "PullRequestLambdaTarget___get_pull_request"
+      ]
+    }
+  }
 }
