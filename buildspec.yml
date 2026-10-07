@@ -12,7 +12,7 @@ phases:
       - export PATH="$HOME/.local/bin:$PATH"
       - kiro-cli --version
       - mkdir -p "$HOME/.kiro/agents" "$HOME/.kiro/settings"
-      - cp .kiro/agents/pr-reviewer.md "$HOME/.kiro/agents/pr-reviewer.md"
+      - cp .kiro/agents/pr-reviewer-prompt.md "$HOME/.kiro/agents/pr-reviewer-prompt.md"
       - cp .kiro/settings/mcp.json "$HOME/.kiro/settings/mcp.json"
 
   pre_build:
