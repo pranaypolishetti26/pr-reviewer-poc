@@ -13,20 +13,18 @@ phases:
       - kiro-cli --version
       - mkdir -p "$HOME/.kiro/agents" "$HOME/.kiro/settings"
       - cp .kiro/agents/pr-reviewer-prompt.md "$HOME/.kiro/agents/pr-reviewer-prompt.md"
+      - cp .kiro/agents/pr-reviewer.json "$HOME/.kiro/agents/pr-reviewer.json"
       - cp .kiro/settings/mcp.json "$HOME/.kiro/settings/mcp.json"
 
   pre_build:
     commands:
-      - |
-        case "$CODEBUILD_WEBHOOK_TRIGGER" in
-          pr/*) echo "Pull request webhook detected: $CODEBUILD_WEBHOOK_TRIGGER" ;;
-          *) echo "This build was not triggered by a PR webhook"; exit 1 ;;
-        esac
+      - echo "Webhook trigger is $CODEBUILD_WEBHOOK_TRIGGER"
+      - export PR_NUMBER=$(echo "$CODEBUILD_WEBHOOK_TRIGGER" | cut -d'/' -f2)
+      - echo "PR number is $PR_NUMBER"
 
   build:
     commands:
       - |
-        PR_NUMBER="${CODEBUILD_WEBHOOK_TRIGGER#pr/}"
 
         PROMPT="Review pull request ${PR_NUMBER} in ${GITHUB_REPOSITORY}.
         Read the pull request changes and the linked GitHub issue using the GitHub MCP server.
