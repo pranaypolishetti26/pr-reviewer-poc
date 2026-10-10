@@ -1,7 +1,7 @@
 {
   "name": "pr-reviewer",
   "description": "Reviews PRs using approved MCP read tools and returns structured JSON for CodeBuild to publish.",
-  "prompt": "file://pr-reviewer-prompt.md",
+  "prompt": "file://./pr-reviewer-prompt.md",
   "includeMcpJson": true,
   "welcomeMessage": "PR Reviewer ready. Provide a GitHub pull request number to review.",
   "tools": [
