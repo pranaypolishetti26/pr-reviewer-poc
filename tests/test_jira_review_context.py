@@ -64,11 +64,12 @@ class JiraReviewTests(unittest.TestCase):
         self.assertEqual(context['build_command'], setup.FINERACT_COMMAND)
         self.assertNotIn('doc', context['build_command'])
 
-    def extract(self, context, calls):
+    def extract(self, context, calls, wrapped=False):
         events = []
         for index, (name, args) in enumerate(calls):
             events.append({'update': {'sessionUpdate': 'tool_call', 'toolCallId': str(index),
-                                      'name': name, 'rawInput': args, 'status': 'completed'}})
+                                      'name': name, 'rawInput': {'tool_id': name, 'arguments': args} if wrapped else args,
+                                      'status': 'completed'}})
         events.append({'update': {'sessionUpdate': 'agent_message_chunk',
                                   'content': {'type': 'text', 'text': json.dumps(review())}}})
         with tempfile.TemporaryDirectory() as directory:
@@ -85,12 +86,15 @@ class JiraReviewTests(unittest.TestCase):
         calls += [('@github/get_file_contents', {'path': path, 'ref': SHA})
                   for path in context['documentation_paths']]
         self.extract(context, calls)
+        self.extract(context, calls, wrapped=True)
         for invalid in (calls[:1] + calls[2:], calls[:-1],
                         calls + [('@project-knowledge/ProjectDocsLambdaTarget___search_project_docs', {})],
                         [(name, {**args, 'ref': 'develop'} if 'path' in args else args) for name, args in calls],
                         [(name, {'issue_key': 'SCRUM-99'} if 'jira_get_issue' in name else args) for name, args in calls]):
             with self.assertRaisesRegex(ValueError, 'REVIEW_TOOL_ERROR'):
                 self.extract(context, invalid)
+            with self.assertRaisesRegex(ValueError, 'REVIEW_TOOL_ERROR'):
+                self.extract(context, invalid, wrapped=True)
 
     def test_github_issue_fallback_cannot_skip_issue_read(self):
         context = self.context(body='Refs #12')
@@ -99,6 +103,18 @@ class JiraReviewTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'issue_read'):
             self.extract(context, calls)
         self.extract(context, calls + [('@github/issue_read', {'issue_number': 12})])
+
+    def test_documentation_sha_parameter_takes_precedence_over_ref(self):
+        context = self.context('SCRUM-5', repository='pranaypolishetti26/fineract')
+        calls = [('@github/pull_request_read', {}),
+                 ('@mcp-atlassian/jira_get_issue', {'issue_key': 'SCRUM-5'})]
+        calls += [('@github/get_file_contents', {'path': path, 'sha': SHA})
+                  for path in context['documentation_paths']]
+        self.extract(context, calls, wrapped=True)
+        invalid = [(name, {**args, 'sha': 'b' * 40, 'ref': SHA} if 'path' in args else args)
+                   for name, args in calls]
+        with self.assertRaisesRegex(ValueError, 'pinned documentation read'):
+            self.extract(context, invalid, wrapped=True)
 
     def test_sha_change_during_setup_is_rejected(self):
         with self.assertRaisesRegex(ValueError, 'STALE_REVIEW'):

@@ -121,7 +121,11 @@ def extract_review(stream_path, review_path):
             if update.get("name") or (name and call_id not in tool_names):
                 tool_names[call_id] = name
             if isinstance(update.get("rawInput"), dict):
-                tool_inputs[call_id] = update["rawInput"]
+                raw_input = update["rawInput"]
+                # Kiro V3 wraps MCP parameters in {tool_id, arguments}; older
+                # ACP streams expose the parameters directly.
+                arguments = raw_input.get("arguments")
+                tool_inputs[call_id] = arguments if isinstance(arguments, dict) else raw_input
             if "status" in update:
                 tool_statuses[call_id] = update["status"]
             require(update.get("status") != "failed",
@@ -184,7 +188,7 @@ def extract_review(stream_path, review_path):
                     for args in completed_inputs("jira_get_issue")),
                 f"REVIEW_TOOL_ERROR: no successful Jira read for {key}")
     for path in context.get("documentation_paths", []):
-        require(any(args.get("path") == path and args.get("ref") == context["head_sha"]
+        require(any(args.get("path") == path and (args.get("sha") or args.get("ref")) == context["head_sha"]
                     for args in completed_inputs("get_file_contents")),
                 f"REVIEW_TOOL_ERROR: no successful pinned documentation read for {path}")
     Path(review_path).write_text(json.dumps(review) + "\n")

@@ -37,7 +37,7 @@ Never turn unavailable Jira evidence into a GitHub-only approval.
    the linked issue with issue_read. If none exists, state that acceptance
    criteria could not be verified and use UNVERIFIED for alignment.
 3. For documentation_source=repository, use get_file_contents to read EVERY
-   documentation_path from the reviewed repository with ref set to the exact
+   documentation_path from the reviewed repository with sha set to the exact
    supplied head SHA. Follow README/CONTRIBUTING/AGENTS/SECURITY references
    relevant to the change; additional code or documentation reads must also
    use that SHA. For Apache Fineract, never query project-knowledge or use
@@ -103,14 +103,5 @@ Keep all explanations concise and report relevant missing coverage in `test_cove
 }
 ```
 
-If there are no blocking issues:
-
-```text
-Verdict: APPROVE
-```
-
-If requirements are violated, required tests are missing, or the CodeBuild Gradle command failed:
-
-```text
-Verdict: NEEDS_CHANGES
-```
+Express the verdict only in the JSON verdict field. Do not add a separate
+verdict line, introduction, analysis, or Markdown fence before or after the JSON.
