@@ -21,6 +21,27 @@
       "disabledTools": [
         "PullRequestLambdaTarget___get_pull_request"
       ]
+    },
+    "mcp-atlassian": {
+      "command": "uvx",
+      "args": [
+        "--python",
+        "3.12",
+        "mcp-atlassian==0.23.1"
+      ],
+      "env": {
+        "JIRA_URL": "https://api.atlassian.com/ex/jira/888ba0e5-a89b-430c-ae7b-9d9c22c629d0",
+        "JIRA_USERNAME": "${JIRA_EMAIL}",
+        "JIRA_API_TOKEN": "${JIRA_API_TOKEN}",
+        "READ_ONLY_MODE": "true",
+        "ENABLED_TOOLS": "jira_get_issue",
+        "MCP_VERBOSE": "false",
+        "MCP_VERY_VERBOSE": "false"
+      },
+      "disabled": true,
+      "autoApprove": [
+        "jira_get_issue"
+      ]
     }
   }
 }
