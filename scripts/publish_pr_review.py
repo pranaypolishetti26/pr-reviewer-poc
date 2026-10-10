@@ -42,7 +42,8 @@ def log_event(event, exit_code=0):
         for line in stream.read_text().splitlines():
             try:
                 item = json.loads(line)
-                update = item.get("params", item).get("update", item)
+                notification = item.get("params", item.get("data", item))
+                update = notification.get("update", notification)
                 if update.get("sessionUpdate") not in ("tool_call", "tool_call_update"):
                     continue
                 call = calls.setdefault(update.get("toolCallId"), {})
@@ -96,14 +97,15 @@ def extract_review(stream_path, review_path):
             continue
         event = json.loads(line)
         require(isinstance(event, dict), "Invalid Kiro stream event")
+        require(event.get("type") != "runError", "REVIEW_TOOL_ERROR: Kiro reported a run error")
         require(not event.get("error"), "REVIEW_TOOL_ERROR: Kiro reported an error")
         require(event.get("method") != "session/request_permission",
                 "REVIEW_TOOL_ERROR: tool requested unauthorized interactive permission")
-        result = event.get("result", event)
+        notification = event.get("params", event.get("data", event))
+        result = notification.get("result", notification)
         if "stopReason" in result:
             require(result["stopReason"] == "end_turn", "REVIEW_FAILED: Kiro run did not complete")
-        # ACP notifications may be emitted directly or in JSON-RPC envelopes.
-        notification = event.get("params", event)
+        # Support Kiro's {type, data} stream envelope, JSON-RPC, and direct ACP.
         update = notification.get("update", notification)
         kind = update.get("sessionUpdate")
         if kind in ("tool_call", "tool_call_update"):
