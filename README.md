@@ -80,6 +80,36 @@ raw Gradle/checkout/Kiro output, and exception messages are excluded from consol
 logging. Raw outputs remain local workflow inputs in `/tmp`; do not publish those
 files as log artifacts. The reviewer agent configuration is unchanged.
 
+## Local review-quality evaluation
+
+[evals/scenarios.json](evals/scenarios.json) contains four synthetic scenarios,
+with requirements, expected verdicts, and issue-specific matching phrases:
+a complete global interval implementation, the flawed demo, missing tests, and a
+failed build. These fixtures describe intended PR changes; they do not create PRs
+or call Kiro. Save the structured Kiro review for the matching scenario, then run:
+
+```sh
+python3 scripts/evaluate_reviews.py --scenario bad-demo --review /path/to/review.json
+```
+
+Run a fully offline smoke example with the included hand-written good review:
+
+```sh
+python3 scripts/evaluate_reviews.py --scenario good-global-interval --review evals/example-good-review.json
+```
+
+The evaluator validates the existing JSON contract and expected Gradle exit code,
+then reports detected/missed issue IDs, unmatched finding indexes (false positives),
+verdict/test-result agreement, recall, and precision. Exit codes are 0 for a match,
+1 for quality mismatches, and 2 for invalid input. It needs only Python's standard
+library, no credentials or AWS setup, and never publishes GitHub comments.
+
+Matching is a case-insensitive phrase heuristic: each issue needs one phrase from
+each term group and the expected severity. Combined findings can cover several
+issues. This is a small regression rubric, not semantic judgment; wording changes,
+negation, and unexpected valid findings need manual inspection or rubric updates.
+The example demonstrates the evaluator, not measured Kiro performance.
+
 ## Knowledge Base documents
 
 Upload only this folder to the S3 location used by your Bedrock Knowledge Base:

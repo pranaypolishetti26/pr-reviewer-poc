@@ -1,0 +1,47 @@
+{
+  "scenarios": [
+    {
+      "id": "good-global-interval",
+      "description": "Service-owned global polling interval defaults to 300, validates 60–900 inclusive, returns HTTP 400 without changing state for invalid values, and includes all required unit and integration tests. Customer overrides are unchanged.",
+      "requirements": "docs/knowledge-base/requirements.md and testing-strategy.md",
+      "gradle_exit_code": 0,
+      "expected_verdict": "APPROVE",
+      "expected_findings": []
+    },
+    {
+      "id": "bad-demo",
+      "description": "The implementation in demo/demo-review.patch stores global configuration in the controller, accepts any value, and adds no tests.",
+      "requirements": "demo/DEMO-STEPS.md expected reviewer findings",
+      "gradle_exit_code": 0,
+      "expected_verdict": "NEEDS_CHANGES",
+      "expected_findings": [
+        {"id": "controller-state", "severity": "BLOCKING", "term_groups": [["controller"], ["state", "mutable", "service layer", "service-layer"]]},
+        {"id": "invalid-range", "severity": "BLOCKING", "term_groups": [["60", "900", "range", "bound"], ["valid", "enforce", "accept"]]},
+        {"id": "invalid-http-status", "severity": "BLOCKING", "term_groups": [["400"], ["invalid", "out-of-range", "out of range"]]},
+        {"id": "missing-unit-tests", "severity": "BLOCKING", "term_groups": [["unit"], ["test"], ["missing", "no ", "absent", "not add"]]},
+        {"id": "missing-integration-tests", "severity": "BLOCKING", "term_groups": [["integration"], ["test"], ["missing", "no ", "absent", "not add"]]}
+      ]
+    },
+    {
+      "id": "bad-missing-tests",
+      "description": "The global interval implementation satisfies every functional requirement but adds no unit or integration tests, despite the project testing requirements.",
+      "requirements": "docs/knowledge-base/testing-strategy.md",
+      "gradle_exit_code": 0,
+      "expected_verdict": "NEEDS_CHANGES",
+      "expected_findings": [
+        {"id": "missing-unit-tests", "severity": "BLOCKING", "term_groups": [["unit"], ["test"], ["missing", "no ", "absent", "not add"]]},
+        {"id": "missing-integration-tests", "severity": "BLOCKING", "term_groups": [["integration"], ["test"], ["missing", "no ", "absent", "not add"]]}
+      ]
+    },
+    {
+      "id": "bad-build-failure",
+      "description": "The implementation matches the acceptance criteria, but Gradle compilation fails with exit code 1 before tests run. The reviewer must report FAIL/NOT_RUN and NEEDS_CHANGES without inventing unrelated implementation defects.",
+      "gradle_exit_code": 1,
+      "expected_verdict": "NEEDS_CHANGES",
+      "expected_test_result": "NOT_RUN",
+      "expected_findings": [
+        {"id": "build-failure", "severity": "BLOCKING", "term_groups": [["build", "compil"], ["fail", "error"]]}
+      ]
+    }
+  ]
+}

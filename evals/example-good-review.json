@@ -1,0 +1,23 @@
+{
+  "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "verdict": "APPROVE",
+  "build_tests": {
+    "command": "gradle clean build",
+    "exit_code": 0,
+    "build_result": "PASS",
+    "test_result": "PASS",
+    "details": "All tests passed"
+  },
+  "requirement_alignment": {
+    "requested": "Feature",
+    "implemented": "Feature",
+    "match": "YES"
+  },
+  "test_coverage": "No relevant gaps found",
+  "findings": [],
+  "evidence": [
+    "PR diff",
+    "Knowledge Base",
+    "CodeBuild log"
+  ]
+}
