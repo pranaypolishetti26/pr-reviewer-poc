@@ -19,11 +19,13 @@ Unit tests must cover:
 - value above 900 seconds
 - valid update changes the stored value
 - invalid update does not change the previous value
+- missing or null pollingIntervalSeconds does not change the previous value
 
 Integration tests must cover:
 
 - valid `PUT /api/config/global-polling-interval` returns HTTP 200
 - invalid value returns HTTP 400
+- missing or null pollingIntervalSeconds returns HTTP 400 rather than HTTP 500
 
 ## Review expectation
 

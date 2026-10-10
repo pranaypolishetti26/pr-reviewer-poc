@@ -35,6 +35,11 @@ If the value is outside this range:
 - return HTTP 400
 - do not change the existing global polling interval
 
+Requests with a missing or null `pollingIntervalSeconds` must also return
+HTTP 400 and preserve the previously valid global interval. They must not result
+in a server error. This requirement is identified as `GLOBAL-INTERVAL-MISSING-VALUE`
+so documentation ingestion and PR review can be checked independently.
+
 ### Default
 
 The default global polling interval is **300 seconds**.

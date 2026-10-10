@@ -15,7 +15,14 @@ and deleted documents since the previous sync. See [AWS synchronization docs](ht
 
 ## Repository variables
 
-Configure these under **Settings → Secrets and variables → Actions → Variables**:
+The workflow environment defaults to this POC's verified existing resources:
+bucket `project-docs-018724218019-us-east-2-an`, Knowledge Base `UW6ENMRRLS`, data
+source `5H1O8QTP3N`, prefix `customer-preferences-service/`, and sync role
+`arn:aws:iam::018724218019:role/pr-reviewer-docs-sync`. These are resource
+identifiers, not credentials. AWS authentication uses short-lived OIDC credentials.
+The dedicated sync role and OIDC provider were configured for the live test.
+
+Override them when needed under **Settings → Secrets and variables → Actions → Variables**:
 
 | Variable | Value |
 | --- | --- |
@@ -23,7 +30,7 @@ Configure these under **Settings → Secrets and variables → Actions → Varia
 | `KNOWLEDGE_BASE_ID` | Existing Bedrock Knowledge Base ID |
 | `DATA_SOURCE_ID` | Existing S3 data source ID within that Knowledge Base |
 | `AWS_DOCS_SYNC_ROLE_ARN` | IAM role assumed by GitHub Actions using OIDC |
-| `S3_PREFIX` | Existing dedicated document prefix; defaults to `docs/knowledge-base/` |
+| `S3_PREFIX` | Existing dedicated document prefix; this POC uses `customer-preferences-service/` |
 
 All AWS calls use `us-east-2`. The script checks the existing data source's bucket
 and inclusion prefixes before writing to S3. It does not create or modify AWS
