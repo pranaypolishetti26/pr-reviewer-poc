@@ -127,7 +127,12 @@ def extract_review(stream_path, review_path):
             require(content.get("type") == "text", "Non-text Kiro review output")
             chunks.append(content["text"])
     require(bool(chunks), "REVIEW_FAILED: no assistant review in Kiro output")
-    review = json.loads("".join(chunks))
+    assistant_text = "".join(chunks)
+    print(json.dumps({"event": "review_output_format", "assistant_chunks": len(chunks),
+                      "starts_with_json": assistant_text.lstrip().startswith("{"),
+                      "starts_with_fence": assistant_text.lstrip().startswith("```"),
+                      "completed_tool_calls": len(completed_tools)}), file=sys.stderr)
+    review = json.loads(assistant_text)
     require(isinstance(review, dict), "Review must be a JSON object")
     require(not review.get("error"), f'REVIEW_FAILED: {review.get("error")}')
     require(all(status == "completed" for status in tool_statuses.values()),
@@ -291,5 +296,9 @@ if __name__ == "__main__":
         log_event("github_api_failed", error.code)
         sys.exit(1)
     except (ValueError, KeyError, OSError, URLError, IndexError, TypeError, AttributeError) as error:
+        category = "invalid_json" if isinstance(error, json.JSONDecodeError) else type(error).__name__
+        if isinstance(error, ValueError) and str(error).startswith("REVIEW_TOOL_ERROR"):
+            category = "required_tool_failed"
+        print(json.dumps({"event": "review_error_category", "category": category}), file=sys.stderr)
         log_event("review_failed", 1)
         sys.exit(1)
