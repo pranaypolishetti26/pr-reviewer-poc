@@ -125,7 +125,8 @@ phases:
         Do not rerun the build or tests.
 
         Read the pull request changes using GitHub MCP. Follow the trusted review
-        context below: read every listed Jira key using official Atlassian MCP.
+        context below: read every listed Jira key using mcp-atlassian jira_get_issue
+        with comment_limit=0 and update_history=false.
         When there are no Jira keys, read the linked GitHub issue when present.
         For repository documentation, read each listed path through GitHub MCP
         get_file_contents at commit ${PR_HEAD_SHA}. For knowledge-base documentation,
