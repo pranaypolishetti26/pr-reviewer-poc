@@ -31,6 +31,7 @@ def log_event(event, exit_code=0):
               "build_status": ("PASS" if gradle == "0" else "FAIL") if gradle.isdigit() else "UNKNOWN",
               "test_status": "UNKNOWN", "review_verdict": None,
               "github_mcp_used": False, "knowledge_base_mcp_used": False,
+              "jira_mcp_used": False, "repository_docs_mcp_used": False,
               "error": f"{stage or 'workflow'}_failed" if exit_code else None}
     for field, variable in (("duration_seconds", "REVIEW_STARTED_AT"),
                             ("stage_duration_seconds", "STAGE_STARTED_AT")):
@@ -59,6 +60,8 @@ def log_event(event, exit_code=0):
                  and isinstance(call.get("name", call.get("title", "")), str)]
         record["github_mcp_used"] = any("pull_request_read" in name or "issue_read" in name for name in names)
         record["knowledge_base_mcp_used"] = any("ProjectDocsLambdaTarget___search_project_docs" in name for name in names)
+        record["jira_mcp_used"] = any("getJiraIssue" in name for name in names)
+        record["repository_docs_mcp_used"] = any("get_file_contents" in name for name in names)
     except OSError:
         pass
     try:
@@ -92,6 +95,7 @@ def extract_review(stream_path, review_path):
     tool_names = {}
     tool_statuses = {}
     completed_tools = set()
+    tool_inputs = {}
     for line in Path(stream_path).read_text().splitlines():
         if not line.strip():
             continue
@@ -116,6 +120,8 @@ def extract_review(stream_path, review_path):
             name = update.get("name") or update.get("title")
             if update.get("name") or (name and call_id not in tool_names):
                 tool_names[call_id] = name
+            if isinstance(update.get("rawInput"), dict):
+                tool_inputs[call_id] = update["rawInput"]
             if "status" in update:
                 tool_statuses[call_id] = update["status"]
             require(update.get("status") != "failed",
@@ -150,9 +156,37 @@ def extract_review(stream_path, review_path):
     require(not review.get("error"), f'REVIEW_FAILED: {review.get("error")}')
     require(all(status == "completed" for status in tool_statuses.values()),
             "REVIEW_TOOL_ERROR: required tool call did not complete")
-    for required_tool in ("pull_request_read", "ProjectDocsLambdaTarget___search_project_docs"):
+    context_path = os.environ.get("REVIEW_CONTEXT_PATH")
+    context = json.loads(Path(context_path).read_text()) if context_path else {
+        "documentation_source": "knowledge-base", "jira_keys": [], "github_issue_linked": False}
+    if context_path:
+        require(review.get("head_sha") == context["head_sha"], "STALE_REVIEW: context SHA mismatch")
+    required_tools = ["pull_request_read"]
+    if context["documentation_source"] == "knowledge-base":
+        required_tools.append("ProjectDocsLambdaTarget___search_project_docs")
+    else:
+        require(context["documentation_source"] == "repository", "Invalid documentation source")
+        require(not any("ProjectDocsLambdaTarget___search_project_docs" in name for name in completed_tools),
+                "REVIEW_TOOL_ERROR: unrelated Knowledge Base used for repository documentation")
+        required_tools.append("get_file_contents")
+    if context["jira_keys"]:
+        required_tools.extend(["getAccessibleAtlassianResources", "getJiraIssue"])
+    elif context["github_issue_linked"]:
+        required_tools.append("issue_read")
+    for required_tool in required_tools:
         require(any(required_tool in name for name in completed_tools),
                 f"REVIEW_TOOL_ERROR: no successful call to required tool {required_tool}")
+    def completed_inputs(tool):
+        return [tool_inputs.get(call_id, {}) for call_id, name in tool_names.items()
+                if tool in name and tool_statuses.get(call_id) == "completed"]
+    for key in context["jira_keys"]:
+        require(any(args.get("issueIdOrKey") in (key, context["jira_site"] + "/browse/" + key)
+                    for args in completed_inputs("getJiraIssue")),
+                f"REVIEW_TOOL_ERROR: no successful Jira read for {key}")
+    for path in context.get("documentation_paths", []):
+        require(any(args.get("path") == path and args.get("ref") == context["head_sha"]
+                    for args in completed_inputs("get_file_contents")),
+                f"REVIEW_TOOL_ERROR: no successful pinned documentation read for {path}")
     Path(review_path).write_text(json.dumps(review) + "\n")
 
 
@@ -162,7 +196,8 @@ def validate_review(review, gradle_exit_code, expected_sha):
     require(review.get("verdict") in ("APPROVE", "NEEDS_CHANGES"), "Invalid verdict")
     build = review.get("build_tests")
     require(isinstance(build, dict), "Missing build_tests object")
-    require(build.get("command") == "gradle clean build", "Incorrect build command")
+    require(build.get("command") == os.environ.get("REVIEW_BUILD_COMMAND", "gradle clean build"),
+            "Incorrect build command")
     require(type(build.get("exit_code")) is int and build["exit_code"] == gradle_exit_code,
             "Build exit code does not match CodeBuild")
     require(build.get("build_result") == ("PASS" if gradle_exit_code == 0 else "FAIL"),
@@ -200,7 +235,7 @@ def render_comment(review):
     alignment = review["requirement_alignment"]
     lines = [MARKER, "## Kiro PR Review", "", f'**Verdict:** {review["verdict"]}',
              f'Reviewed commit: `{review["head_sha"]}`', "",
-             "### Build & Tests", "- Command: `gradle clean build` (run by CodeBuild)",
+             "### Build & Tests", f'- Command: `{build["command"]}` (run by CodeBuild)',
              f'- Exit code: {build["exit_code"]}', f'- Build: {build["build_result"]}',
              f'- Tests: {build["test_result"]}', f'- Details: {build["details"]}', "",
              "### Requirement Alignment", f'- What was requested: {alignment["requested"]}',

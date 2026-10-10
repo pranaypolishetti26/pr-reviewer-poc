@@ -7,12 +7,18 @@
   "tools": [
     "@github/pull_request_read",
     "@github/issue_read",
-    "@project-knowledge/ProjectDocsLambdaTarget___search_project_docs"
+    "@project-knowledge/ProjectDocsLambdaTarget___search_project_docs",
+    "@github/get_file_contents",
+    "@atlassian/getAccessibleAtlassianResources",
+    "@atlassian/getJiraIssue"
   ],
   "allowedTools": [
     "@github/pull_request_read",
     "@github/issue_read",
-    "@project-knowledge/ProjectDocsLambdaTarget___search_project_docs"
+    "@project-knowledge/ProjectDocsLambdaTarget___search_project_docs",
+    "@github/get_file_contents",
+    "@atlassian/getAccessibleAtlassianResources",
+    "@atlassian/getJiraIssue"
   ],
   "permissions": {
     "rules": [
@@ -28,7 +34,13 @@
           "@project-knowledge/ProjectDocsLambdaTarget___search_project_docs",
           "github/pull_request_read",
           "github/issue_read",
-          "project-knowledge/ProjectDocsLambdaTarget___search_project_docs"
+          "project-knowledge/ProjectDocsLambdaTarget___search_project_docs",
+          "@github/get_file_contents",
+          "@atlassian/getAccessibleAtlassianResources",
+          "@atlassian/getJiraIssue",
+          "github/get_file_contents",
+          "atlassian/getAccessibleAtlassianResources",
+          "atlassian/getJiraIssue"
         ],
         "effect": "allow"
       },
@@ -40,7 +52,13 @@
           "@project-knowledge/ProjectDocsLambdaTarget___search_project_docs",
           "github/pull_request_read",
           "github/issue_read",
-          "project-knowledge/ProjectDocsLambdaTarget___search_project_docs"
+          "project-knowledge/ProjectDocsLambdaTarget___search_project_docs",
+          "@github/get_file_contents",
+          "@atlassian/getAccessibleAtlassianResources",
+          "@atlassian/getJiraIssue",
+          "github/get_file_contents",
+          "atlassian/getAccessibleAtlassianResources",
+          "atlassian/getJiraIssue"
         ],
         "effect": "deny"
       }

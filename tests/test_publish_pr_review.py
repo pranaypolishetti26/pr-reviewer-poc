@@ -139,6 +139,8 @@ class ReviewTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[1]
         agent = json.loads((root / '.kiro/agents/pr-reviewer.json').read_text())
         approved = {"@github/pull_request_read", "@github/issue_read",
+                    "@github/get_file_contents", "@atlassian/getAccessibleAtlassianResources",
+                    "@atlassian/getJiraIssue",
                     "@project-knowledge/ProjectDocsLambdaTarget___search_project_docs"}
         self.assertEqual(set(agent['tools']), approved)
         self.assertEqual(set(agent['allowedTools']), approved)

@@ -21,6 +21,17 @@
       "disabledTools": [
         "PullRequestLambdaTarget___get_pull_request"
       ]
+    },
+    "atlassian": {
+      "url": "https://mcp.atlassian.com/v2/mcp",
+      "headers": {
+        "Authorization": "Basic ${JIRA_BASIC_AUTH}"
+      },
+      "disabled": true,
+      "autoApprove": [
+        "getAccessibleAtlassianResources",
+        "getJiraIssue"
+      ]
     }
   }
 }
