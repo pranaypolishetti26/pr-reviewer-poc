@@ -18,7 +18,7 @@ class JiraReviewTests(unittest.TestCase):
     def test_secret_key_and_header_formats(self):
         email = 'user@example.com'
         encoded = 'dXNlckBleGFtcGxlLmNvbTp0b2tlbg=='
-        for secret in ({'JIRA_TOKEN': 'token'}, {'JIRA_BASIC_AUTH': 'token'},
+        for secret in ({'JIRA_API_TOKEN': 'token'}, {'JIRA_TOKEN': 'token'}, {'JIRA_BASIC_AUTH': 'token'},
                        {'JIRA_BASIC_AUTH': encoded}, {'JIRA_BASIC_AUTH': 'Basic ' + encoded}):
             self.assertEqual(setup.jira_credentials(secret, email), ('token', email))
         with self.assertRaisesRegex(ValueError, 'email differs'):
@@ -34,7 +34,7 @@ class JiraReviewTests(unittest.TestCase):
         context = self.context(body='Implements #12')
         config = setup.configure_mcp(json.loads((ROOT / '.kiro/settings/mcp.json').read_text()), context)
         agent = setup.configure_agent(json.loads((ROOT / '.kiro/agents/pr-reviewer.json').read_text()), context)
-        self.assertNotIn('atlassian', config['mcpServers'])
+        self.assertNotIn('mcp-atlassian', config['mcpServers'])
         self.assertTrue(context['github_issue_linked'])
         self.assertEqual(context['documentation_source'], 'knowledge-base')
         self.assertIn('@github/issue_read', agent['tools'])
@@ -49,8 +49,9 @@ class JiraReviewTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'JIRA_EMAIL'):
             setup.configure_mcp(copy.deepcopy(config), context, 'token')
         result = setup.configure_mcp(config, context, 'token', 'user@example.com')
-        self.assertEqual(result['mcpServers']['atlassian']['headers']['Authorization'],
-                         'Basic dXNlckBleGFtcGxlLmNvbTp0b2tlbg==')
+        self.assertEqual(result['mcpServers']['mcp-atlassian']['env']['JIRA_API_TOKEN'], 'token')
+        self.assertEqual(result['mcpServers']['mcp-atlassian']['env']['READ_ONLY_MODE'], 'true')
+        self.assertEqual(result['mcpServers']['mcp-atlassian']['env']['ENABLED_TOOLS'], 'jira_get_issue')
 
     def test_fineract_disables_unrelated_knowledge_base(self):
         context = self.context('SCRUM-5', repository='pranaypolishetti26/fineract')
@@ -80,15 +81,14 @@ class JiraReviewTests(unittest.TestCase):
 
     def test_jira_and_pinned_docs_must_actually_be_read(self):
         context = self.context('SCRUM-5', repository='pranaypolishetti26/fineract')
-        calls = [('@github/pull_request_read', {}), ('@atlassian/getAccessibleAtlassianResources', {}),
-                 ('@atlassian/getJiraIssue', {'issueIdOrKey': 'SCRUM-5'})]
+        calls = [('@github/pull_request_read', {}), ('@mcp-atlassian/jira_get_issue', {'issue_key': 'SCRUM-5'})]
         calls += [('@github/get_file_contents', {'path': path, 'ref': SHA})
                   for path in context['documentation_paths']]
         self.extract(context, calls)
-        for invalid in (calls[:2] + calls[3:], calls[:-1],
+        for invalid in (calls[:1] + calls[2:], calls[:-1],
                         calls + [('@project-knowledge/ProjectDocsLambdaTarget___search_project_docs', {})],
                         [(name, {**args, 'ref': 'develop'} if 'path' in args else args) for name, args in calls],
-                        [(name, {'issueIdOrKey': 'SCRUM-99'} if 'getJiraIssue' in name else args) for name, args in calls]):
+                        [(name, {'issue_key': 'SCRUM-99'} if 'jira_get_issue' in name else args) for name, args in calls]):
             with self.assertRaisesRegex(ValueError, 'REVIEW_TOOL_ERROR'):
                 self.extract(context, invalid)
 

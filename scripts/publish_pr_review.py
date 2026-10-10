@@ -60,7 +60,7 @@ def log_event(event, exit_code=0):
                  and isinstance(call.get("name", call.get("title", "")), str)]
         record["github_mcp_used"] = any("pull_request_read" in name or "issue_read" in name for name in names)
         record["knowledge_base_mcp_used"] = any("ProjectDocsLambdaTarget___search_project_docs" in name for name in names)
-        record["jira_mcp_used"] = any("getJiraIssue" in name for name in names)
+        record["jira_mcp_used"] = any("jira_get_issue" in name for name in names)
         record["repository_docs_mcp_used"] = any("get_file_contents" in name for name in names)
     except OSError:
         pass
@@ -170,7 +170,7 @@ def extract_review(stream_path, review_path):
                 "REVIEW_TOOL_ERROR: unrelated Knowledge Base used for repository documentation")
         required_tools.append("get_file_contents")
     if context["jira_keys"]:
-        required_tools.extend(["getAccessibleAtlassianResources", "getJiraIssue"])
+        required_tools.append("jira_get_issue")
     elif context["github_issue_linked"]:
         required_tools.append("issue_read")
     for required_tool in required_tools:
@@ -180,8 +180,8 @@ def extract_review(stream_path, review_path):
         return [tool_inputs.get(call_id, {}) for call_id, name in tool_names.items()
                 if tool in name and tool_statuses.get(call_id) == "completed"]
     for key in context["jira_keys"]:
-        require(any(args.get("issueIdOrKey") in (key, context["jira_site"] + "/browse/" + key)
-                    for args in completed_inputs("getJiraIssue")),
+        require(any(args.get("issue_key") == key
+                    for args in completed_inputs("jira_get_issue")),
                 f"REVIEW_TOOL_ERROR: no successful Jira read for {key}")
     for path in context.get("documentation_paths", []):
         require(any(args.get("path") == path and args.get("ref") == context["head_sha"]

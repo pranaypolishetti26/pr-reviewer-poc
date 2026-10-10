@@ -17,6 +17,8 @@ JIRA_SITE = "https://pranaypspk26.atlassian.net"
 
 
 def jira_credentials(secret, email):
+    if secret.get('JIRA_API_TOKEN'):
+        return secret['JIRA_API_TOKEN'], email
     if secret.get('JIRA_TOKEN'):
         return secret['JIRA_TOKEN'], email
     value = secret.get('JIRA_BASIC_AUTH', '')
@@ -60,15 +62,23 @@ def configure_mcp(config, context, jira_token=None, jira_email=None):
         servers['github']['autoApprove'] = ['pull_request_read', 'issue_read', 'get_file_contents']
     if not context['jira_keys']:
         servers.pop('atlassian', None)
+        servers.pop('mcp-atlassian', None)
     else:
         require(bool(jira_token), 'JIRA_AUTH_SETUP_REQUIRED: JIRA_TOKEN is missing')
         require(bool(jira_email), 'JIRA_AUTH_SETUP_REQUIRED: JIRA_EMAIL is missing')
-        encoded = base64.b64encode(f'{jira_email}:{jira_token}'.encode()).decode()
-        servers['atlassian'] = {
-            'url': 'https://mcp.atlassian.com/v2/mcp',
-            'headers': {'Authorization': 'Basic ' + encoded},
+        servers.pop('atlassian', None)
+        servers['mcp-atlassian'] = {
+            'command': 'uvx',
+            'args': ['--python', '3.12', 'mcp-atlassian==0.23.1'],
+            'env': {
+                # Scoped Jira API tokens use the Cloud API gateway.
+                'JIRA_URL': 'https://api.atlassian.com/ex/jira/888ba0e5-a89b-430c-ae7b-9d9c22c629d0',
+                'JIRA_USERNAME': jira_email, 'JIRA_API_TOKEN': jira_token,
+                'READ_ONLY_MODE': 'true', 'ENABLED_TOOLS': 'jira_get_issue',
+                'MCP_VERBOSE': 'false', 'MCP_VERY_VERBOSE': 'false',
+            },
             'disabled': False,
-            'autoApprove': ['getAccessibleAtlassianResources', 'getJiraIssue'],
+            'autoApprove': ['jira_get_issue'],
         }
     return config
 
@@ -78,7 +88,7 @@ def configure_agent(agent, context):
     tools.append('@github/get_file_contents' if context['documentation_source'] == 'repository'
                  else '@project-knowledge/ProjectDocsLambdaTarget___search_project_docs')
     if context['jira_keys']:
-        tools.extend(['@atlassian/getAccessibleAtlassianResources', '@atlassian/getJiraIssue'])
+        tools.append('@mcp-atlassian/jira_get_issue')
     agent['tools'] = tools
     agent['allowedTools'] = tools
     patterns = tools + [tool.removeprefix('@') for tool in tools]
