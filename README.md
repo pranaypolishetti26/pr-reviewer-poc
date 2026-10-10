@@ -112,7 +112,12 @@ The example demonstrates the evaluator, not measured Kiro performance.
 
 ## Knowledge Base documents
 
-Upload only this folder to the S3 location used by your Bedrock Knowledge Base:
+Documentation changes merged into `main` are synchronized by a separate GitHub
+Actions workflow to the existing S3 data source, then ingested into Bedrock in
+`us-east-2`. The PR-review CodeBuild workflow remains separate.
+Configure repository variables and IAM using [the synchronization setup guide](docs/knowledge-base-sync.md).
+
+Only this folder is synchronized:
 
 ```text
 docs/knowledge-base/

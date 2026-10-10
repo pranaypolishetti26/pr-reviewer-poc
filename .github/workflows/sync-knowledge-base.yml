@@ -1,0 +1,42 @@
+name: Sync project Knowledge Base
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/knowledge-base/**'
+
+permissions:
+  contents: read
+  id-token: write
+
+# Complete ingestion before another run changes S3. Pending runs use latest main.
+concurrency:
+  group: project-knowledge-base-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      AWS_REGION: us-east-2
+      S3_BUCKET: ${{ vars.S3_BUCKET }}
+      KNOWLEDGE_BASE_ID: ${{ vars.KNOWLEDGE_BASE_ID }}
+      DATA_SOURCE_ID: ${{ vars.DATA_SOURCE_ID }}
+      S3_PREFIX: ${{ vars.S3_PREFIX || 'docs/knowledge-base/' }}
+    steps:
+      - name: Check out latest merged documentation
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Authenticate to existing AWS resources
+        uses: aws-actions/configure-aws-credentials@v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DOCS_SYNC_ROLE_ARN }}
+          aws-region: us-east-2
+          role-session-name: knowledge-base-docs-sync
+      - name: Synchronize S3 and ingest documents
+        run: python3 scripts/sync_knowledge_base.py
