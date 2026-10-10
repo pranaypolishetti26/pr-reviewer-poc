@@ -22,10 +22,11 @@ jobs:
     timeout-minutes: 30
     env:
       AWS_REGION: us-east-2
-      S3_BUCKET: ${{ vars.S3_BUCKET }}
-      KNOWLEDGE_BASE_ID: ${{ vars.KNOWLEDGE_BASE_ID }}
-      DATA_SOURCE_ID: ${{ vars.DATA_SOURCE_ID }}
-      S3_PREFIX: ${{ vars.S3_PREFIX || 'docs/knowledge-base/' }}
+      S3_BUCKET: ${{ vars.S3_BUCKET || 'project-docs-018724218019-us-east-2-an' }}
+      KNOWLEDGE_BASE_ID: ${{ vars.KNOWLEDGE_BASE_ID || 'UW6ENMRRLS' }}
+      DATA_SOURCE_ID: ${{ vars.DATA_SOURCE_ID || '5H1O8QTP3N' }}
+      S3_PREFIX: ${{ vars.S3_PREFIX || 'customer-preferences-service/' }}
+      AWS_DOCS_SYNC_ROLE_ARN: ${{ vars.AWS_DOCS_SYNC_ROLE_ARN || 'arn:aws:iam::018724218019:role/pr-reviewer-docs-sync' }}
     steps:
       - name: Check out latest merged documentation
         uses: actions/checkout@v6
@@ -35,7 +36,7 @@ jobs:
       - name: Authenticate to existing AWS resources
         uses: aws-actions/configure-aws-credentials@v6.3.0
         with:
-          role-to-assume: ${{ vars.AWS_DOCS_SYNC_ROLE_ARN }}
+          role-to-assume: ${{ env.AWS_DOCS_SYNC_ROLE_ARN }}
           aws-region: us-east-2
           role-session-name: knowledge-base-docs-sync
       - name: Synchronize S3 and ingest documents
