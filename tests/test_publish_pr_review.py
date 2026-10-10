@@ -87,6 +87,16 @@ class ReviewTests(unittest.TestCase):
             publisher.extract_review(source, dest)
             publisher.validate_review(json.loads(dest.read_text()), 0, SHA)
 
+    def test_progress_text_is_excluded_and_final_json_fence_is_accepted(self):
+        events = [{"update": {"sessionUpdate": "agent_message_chunk",
+                              "content": {"type": "text", "text": "Checking the PR now."}}}]
+        events.extend(self.stream_events("```json\n" + json.dumps(review()) + "\n```"))
+        with tempfile.TemporaryDirectory() as directory:
+            source, dest = Path(directory) / "stream", Path(directory) / "review"
+            source.write_text("\n".join(json.dumps(event) for event in events))
+            publisher.extract_review(source, dest)
+            publisher.validate_review(json.loads(dest.read_text()), 0, SHA)
+
     def test_kiro_stream_envelopes_extract_review_and_track_mcp(self):
         events = [{'type': 'runStarted', 'data': {'engine': 'v3'}}]
         for event in self.stream_events(json.dumps(review())):

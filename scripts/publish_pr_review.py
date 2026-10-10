@@ -109,6 +109,9 @@ def extract_review(stream_path, review_path):
         update = notification.get("update", notification)
         kind = update.get("sessionUpdate")
         if kind in ("tool_call", "tool_call_update"):
+            if kind == "tool_call":
+                # ACP streams progress messages too; only the final response is the review.
+                chunks.clear()
             call_id = update.get("toolCallId")
             name = update.get("name") or update.get("title")
             if update.get("name") or (name and call_id not in tool_names):
@@ -132,6 +135,9 @@ def extract_review(stream_path, review_path):
                       "starts_with_json": assistant_text.lstrip().startswith("{"),
                       "starts_with_fence": assistant_text.lstrip().startswith("```"),
                       "completed_tool_calls": len(completed_tools)}), file=sys.stderr)
+    assistant_text = assistant_text.strip()
+    if assistant_text.startswith("```json\n") and assistant_text.endswith("\n```"):
+        assistant_text = assistant_text[8:-4]
     review = json.loads(assistant_text)
     require(isinstance(review, dict), "Review must be a JSON object")
     require(not review.get("error"), f'REVIEW_FAILED: {review.get("error")}')
