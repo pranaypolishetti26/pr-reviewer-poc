@@ -45,6 +45,8 @@ def check(data, step):
             reason = 'insufficient scopes; required: ' + ', '.join(scopes)
         if 'failed to fetch accessible products: 401' in message:
             reason = 'Failed to fetch accessible products: 401'
+        if "you don't have permission to connect via api token" in message:
+            reason = 'API-token connections are not permitted; ask the Atlassian organization admin for access'
         raise ValueError(f'JIRA_MCP_BLOCKED: {step}: {reason}')
     return data['result']
 

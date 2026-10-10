@@ -15,6 +15,18 @@ from test_publish_pr_review import SHA, review
 
 
 class JiraReviewTests(unittest.TestCase):
+    def test_secret_key_and_header_formats(self):
+        email = 'user@example.com'
+        encoded = 'dXNlckBleGFtcGxlLmNvbTp0b2tlbg=='
+        for secret in ({'JIRA_TOKEN': 'token'}, {'JIRA_BASIC_AUTH': 'token'},
+                       {'JIRA_BASIC_AUTH': encoded}, {'JIRA_BASIC_AUTH': 'Basic ' + encoded}):
+            self.assertEqual(setup.jira_credentials(secret, email), ('token', email))
+        with self.assertRaisesRegex(ValueError, 'email differs'):
+            setup.jira_credentials({'JIRA_BASIC_AUTH': encoded}, 'other@example.com')
+        with self.assertRaisesRegex(ValueError, 'invalid JIRA_BASIC_AUTH'):
+            setup.jira_credentials({'JIRA_BASIC_AUTH': 'Basic invalid'}, email)
+        self.assertEqual(setup.jira_credentials({}, email), (None, email))
+
     def context(self, title='', body='', repository='owner/repo'):
         return setup.context_for({'head': {'sha': SHA}, 'title': title, 'body': body}, repository, SHA)
 

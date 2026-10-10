@@ -16,6 +16,27 @@ FINERACT_COMMAND = ("./gradlew --no-daemon --console=plain :fineract-core:test "
 JIRA_SITE = "https://pranaypspk26.atlassian.net"
 
 
+def jira_credentials(secret, email):
+    if secret.get('JIRA_TOKEN'):
+        return secret['JIRA_TOKEN'], email
+    value = secret.get('JIRA_BASIC_AUTH', '')
+    if not value:
+        return None, email
+    # Accept the header-ready value or a raw token stored under the renamed key.
+    try:
+        decoded = base64.b64decode(value.removeprefix('Basic '), validate=True).decode()
+        owner, token = decoded.split(':', 1)
+    except (ValueError, UnicodeError):
+        if value.startswith('Basic '):
+            raise ValueError('JIRA_AUTH_SETUP_REQUIRED: invalid JIRA_BASIC_AUTH encoding')
+        return value, email
+    if '@' in owner and token:
+        require(not email or owner == email,
+                'JIRA_AUTH_SETUP_REQUIRED: encoded credential email differs from JIRA_EMAIL')
+        return token, owner
+    return value, email
+
+
 def context_for(pr, repository, expected_sha):
     require(pr['head']['sha'] == expected_sha, 'STALE_REVIEW: PR head changed during setup')
     content = (pr.get('title') or '') + '\n' + (pr.get('body') or '')
@@ -75,6 +96,7 @@ def main():
                         os.environ['GITHUB_PERSONAL_ACCESS_TOKEN'])
     context = context_for(pr, repository, os.environ['PR_HEAD_SHA'])
     token = None
+    email = os.environ.get('JIRA_EMAIL')
     if context['jira_keys']:
         # Conditional lookup preserves no-Jira builds even if no Jira secret exists.
         result = subprocess.run(['aws', 'secretsmanager', 'get-secret-value',
@@ -82,9 +104,9 @@ def main():
                                  '--query', 'SecretString', '--output', 'text'],
                                 capture_output=True, text=True)
         require(result.returncode == 0, 'JIRA_AUTH_SETUP_REQUIRED: CodeBuild cannot read the Jira secret')
-        token = json.loads(result.stdout).get('JIRA_TOKEN')
+        token, email = jira_credentials(json.loads(result.stdout), email)
     config_path = Path(sys.argv[1])
-    config = configure_mcp(json.loads(config_path.read_text()), context, token, os.environ.get('JIRA_EMAIL'))
+    config = configure_mcp(json.loads(config_path.read_text()), context, token, email)
     config_path.chmod(0o600)
     config_path.write_text(json.dumps(config, indent=2) + '\n')
     agent_path = Path(sys.argv[3])
