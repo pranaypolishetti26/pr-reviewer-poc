@@ -42,7 +42,8 @@ def log_event(event, exit_code=0):
         for line in stream.read_text().splitlines():
             try:
                 item = json.loads(line)
-                update = item.get("params", item).get("update", item)
+                notification = item.get("params", item.get("data", item))
+                update = notification.get("update", notification)
                 if update.get("sessionUpdate") not in ("tool_call", "tool_call_update"):
                     continue
                 call = calls.setdefault(update.get("toolCallId"), {})
@@ -96,17 +97,21 @@ def extract_review(stream_path, review_path):
             continue
         event = json.loads(line)
         require(isinstance(event, dict), "Invalid Kiro stream event")
+        require(event.get("type") != "runError", "REVIEW_TOOL_ERROR: Kiro reported a run error")
         require(not event.get("error"), "REVIEW_TOOL_ERROR: Kiro reported an error")
         require(event.get("method") != "session/request_permission",
                 "REVIEW_TOOL_ERROR: tool requested unauthorized interactive permission")
-        result = event.get("result", event)
+        notification = event.get("params", event.get("data", event))
+        result = notification.get("result", notification)
         if "stopReason" in result:
             require(result["stopReason"] == "end_turn", "REVIEW_FAILED: Kiro run did not complete")
-        # ACP notifications may be emitted directly or in JSON-RPC envelopes.
-        notification = event.get("params", event)
+        # Support Kiro's {type, data} stream envelope, JSON-RPC, and direct ACP.
         update = notification.get("update", notification)
         kind = update.get("sessionUpdate")
         if kind in ("tool_call", "tool_call_update"):
+            if kind == "tool_call":
+                # ACP streams progress messages too; only the final response is the review.
+                chunks.clear()
             call_id = update.get("toolCallId")
             name = update.get("name") or update.get("title")
             if update.get("name") or (name and call_id not in tool_names):
@@ -125,7 +130,22 @@ def extract_review(stream_path, review_path):
             require(content.get("type") == "text", "Non-text Kiro review output")
             chunks.append(content["text"])
     require(bool(chunks), "REVIEW_FAILED: no assistant review in Kiro output")
-    review = json.loads("".join(chunks))
+    assistant_text = "".join(chunks)
+    print(json.dumps({"event": "review_output_format", "assistant_chunks": len(chunks),
+                      "starts_with_json": assistant_text.lstrip().startswith("{"),
+                      "starts_with_fence": assistant_text.lstrip().startswith("```"),
+                      "completed_tool_calls": len(completed_tools)}), file=sys.stderr)
+    assistant_text = assistant_text.strip()
+    # Kiro can add a short introduction even when asked for JSON only. Capture
+    # one final JSON document; never repair JSON or accept text after the review.
+    fenced = re.search(r"(?:^|\n)```json\n(.*)\n```$", assistant_text, re.DOTALL)
+    if fenced:
+        assistant_text = fenced.group(1)
+    elif not assistant_text.startswith("{"):
+        start = re.search(r"(?:^|\n)[ \t]*\{", assistant_text)
+        require(start is not None, "REVIEW_FAILED: no final JSON document")
+        assistant_text = assistant_text[start.start():].lstrip()
+    review = json.loads(assistant_text)
     require(isinstance(review, dict), "Review must be a JSON object")
     require(not review.get("error"), f'REVIEW_FAILED: {review.get("error")}')
     require(all(status == "completed" for status in tool_statuses.values()),
@@ -289,5 +309,9 @@ if __name__ == "__main__":
         log_event("github_api_failed", error.code)
         sys.exit(1)
     except (ValueError, KeyError, OSError, URLError, IndexError, TypeError, AttributeError) as error:
+        category = "invalid_json" if isinstance(error, json.JSONDecodeError) else type(error).__name__
+        if isinstance(error, ValueError) and str(error).startswith("REVIEW_TOOL_ERROR"):
+            category = "required_tool_failed"
+        print(json.dumps({"event": "review_error_category", "category": category}), file=sys.stderr)
         log_event("review_failed", 1)
         sys.exit(1)
