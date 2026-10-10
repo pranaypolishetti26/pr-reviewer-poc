@@ -4,13 +4,12 @@
       "url": "https://api.githubcopilot.com/mcp/",
       "headers": {
         "Authorization": "Bearer ${GITHUB_TOKEN}",
-        "X-MCP-Tools": "pull_request_read,issue_read,add_issue_comment"
+        "X-MCP-Tools": "pull_request_read,issue_read"
       },
       "disabled": false,
       "autoApprove": [
         "pull_request_read",
-        "issue_read",
-        "add_issue_comment"
+        "issue_read"
       ]
     },
     "project-knowledge": {

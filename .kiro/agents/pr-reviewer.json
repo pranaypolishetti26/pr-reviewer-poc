@@ -1,62 +1,50 @@
 {
   "name": "pr-reviewer",
-  "description": "Reviews GitHub pull requests against linked acceptance criteria and Bedrock Knowledge Base project requirements, runs the build/tests, and posts one review comment.",
+  "description": "Reviews PRs using approved MCP read tools and returns structured JSON for CodeBuild to publish.",
   "prompt": "file://pr-reviewer-prompt.md",
   "includeMcpJson": true,
   "welcomeMessage": "PR Reviewer ready. Provide a GitHub pull request number to review.",
   "tools": [
-    "read",
-    "code",
-    "shell",
     "@github/pull_request_read",
     "@github/issue_read",
-    "@github/add_issue_comment",
     "@project-knowledge/ProjectDocsLambdaTarget___search_project_docs"
   ],
   "allowedTools": [
-    "read",
-    "code",
-    "shell",
     "@github/pull_request_read",
     "@github/issue_read",
-    "@github/add_issue_comment",
     "@project-knowledge/ProjectDocsLambdaTarget___search_project_docs"
   ],
   "permissions": {
     "rules": [
       {
-        "capability": "fs_read",
-        "match": [
-          "docs/knowledge-base/**"
-        ],
+        "capability": "builtin",
         "effect": "deny"
-      },
-      {
-        "capability": "fs_read",
-        "effect": "allow"
-      },
-      {
-        "capability": "shell",
-        "match": [
-          "./gradlew *",
-          "gradle *",
-          "git status*",
-          "git diff*",
-          "git log*",
-          "git show*"
-        ],
-        "effect": "allow"
       },
       {
         "capability": "mcp",
         "match": [
           "@github/pull_request_read",
           "@github/issue_read",
-          "@github/add_issue_comment",
-          "@project-knowledge/ProjectDocsLambdaTarget___search_project_docs"
+          "@project-knowledge/ProjectDocsLambdaTarget___search_project_docs",
+          "github/pull_request_read",
+          "github/issue_read",
+          "project-knowledge/ProjectDocsLambdaTarget___search_project_docs"
         ],
         "effect": "allow"
+      },
+      {
+        "capability": "mcp",
+        "exclude": [
+          "@github/pull_request_read",
+          "@github/issue_read",
+          "@project-knowledge/ProjectDocsLambdaTarget___search_project_docs",
+          "github/pull_request_read",
+          "github/issue_read",
+          "project-knowledge/ProjectDocsLambdaTarget___search_project_docs"
+        ],
+        "effect": "deny"
       }
     ]
-  }
+  },
+  "includePowers": false
 }
