@@ -90,7 +90,7 @@ class ReviewTests(unittest.TestCase):
     def test_progress_text_is_excluded_and_final_json_fence_is_accepted(self):
         events = [{"update": {"sessionUpdate": "agent_message_chunk",
                               "content": {"type": "text", "text": "Checking the PR now."}}}]
-        events.extend(self.stream_events("```json\n" + json.dumps(review()) + "\n```"))
+        events.extend(self.stream_events("Both tools succeeded.\n\n```json\n" + json.dumps(review()) + "\n```"))
         with tempfile.TemporaryDirectory() as directory:
             source, dest = Path(directory) / "stream", Path(directory) / "review"
             source.write_text("\n".join(json.dumps(event) for event in events))
@@ -124,6 +124,8 @@ class ReviewTests(unittest.TestCase):
                  self.stream_events(json.dumps(review())) + [{"update": {
                     "sessionUpdate": "tool_call", "toolCallId": "issue", "status": "pending"}}],
                  self.stream_events(json.dumps({"error": "REVIEW_TOOL_ERROR: issue_read unauthorized"})),
+                 self.stream_events(json.dumps(review()) + '\ntrailing text'),
+                 self.stream_events('Introduction\n' + json.dumps(review()) + '\n' + json.dumps(review())),
                  self.stream_events('not JSON')]
         with tempfile.TemporaryDirectory() as directory:
             source, dest = Path(directory) / "stream", Path(directory) / "review"

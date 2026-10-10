@@ -136,8 +136,15 @@ def extract_review(stream_path, review_path):
                       "starts_with_fence": assistant_text.lstrip().startswith("```"),
                       "completed_tool_calls": len(completed_tools)}), file=sys.stderr)
     assistant_text = assistant_text.strip()
-    if assistant_text.startswith("```json\n") and assistant_text.endswith("\n```"):
-        assistant_text = assistant_text[8:-4]
+    # Kiro can add a short introduction even when asked for JSON only. Capture
+    # one final JSON document; never repair JSON or accept text after the review.
+    fenced = re.search(r"(?:^|\n)```json\n(.*)\n```$", assistant_text, re.DOTALL)
+    if fenced:
+        assistant_text = fenced.group(1)
+    elif not assistant_text.startswith("{"):
+        start = re.search(r"(?:^|\n)[ \t]*\{", assistant_text)
+        require(start is not None, "REVIEW_FAILED: no final JSON document")
+        assistant_text = assistant_text[start.start():].lstrip()
     review = json.loads(assistant_text)
     require(isinstance(review, dict), "Review must be a JSON object")
     require(not review.get("error"), f'REVIEW_FAILED: {review.get("error")}')
