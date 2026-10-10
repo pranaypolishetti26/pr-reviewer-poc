@@ -42,6 +42,115 @@
       "expected_findings": [
         {"id": "build-failure", "severity": "BLOCKING", "term_groups": [["build", "compil"], ["fail", "error"]]}
       ]
+    },
+    {
+      "id": "bad-live-global-interval",
+      "description": "Live PR #6: intentionally faulty demo implementation after the merged missing/null interval requirement was indexed by Bedrock. Expected functional, architecture, and test-coverage findings.",
+      "requirements": "docs/knowledge-base/requirements.md and testing-strategy.md; GitHub issue #5",
+      "gradle_exit_code": 0,
+      "expected_verdict": "NEEDS_CHANGES",
+      "expected_findings": [
+        {
+          "id": "controller-state",
+          "severity": "BLOCKING",
+          "term_groups": [
+            [
+              "controller"
+            ],
+            [
+              "state",
+              "mutable",
+              "service layer",
+              "service-layer"
+            ]
+          ]
+        },
+        {
+          "id": "invalid-range",
+          "severity": "BLOCKING",
+          "term_groups": [
+            [
+              "60",
+              "900",
+              "range",
+              "bound"
+            ],
+            [
+              "valid",
+              "enforce",
+              "accept"
+            ]
+          ]
+        },
+        {
+          "id": "invalid-http-status",
+          "severity": "BLOCKING",
+          "term_groups": [
+            [
+              "400"
+            ],
+            [
+              "invalid",
+              "out-of-range",
+              "out of range"
+            ]
+          ]
+        },
+        {
+          "id": "missing-unit-tests",
+          "severity": "BLOCKING",
+          "term_groups": [
+            [
+              "unit"
+            ],
+            [
+              "test"
+            ],
+            [
+              "missing",
+              "no ",
+              "absent",
+              "not add"
+            ]
+          ]
+        },
+        {
+          "id": "missing-integration-tests",
+          "severity": "BLOCKING",
+          "term_groups": [
+            [
+              "integration"
+            ],
+            [
+              "test"
+            ],
+            [
+              "missing",
+              "no ",
+              "absent",
+              "not add"
+            ]
+          ]
+        },
+        {
+          "id": "missing-null-http-status",
+          "severity": "BLOCKING",
+          "term_groups": [
+            [
+              "missing",
+              "null"
+            ],
+            [
+              "400"
+            ],
+            [
+              "500",
+              "server error",
+              "NullPointerException"
+            ]
+          ]
+        }
+      ]
     }
   ]
 }

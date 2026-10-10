@@ -1,0 +1,57 @@
+{
+  "head_sha": "fe439e04fcbee48c8b4f188e76ed4278c8416440",
+  "verdict": "NEEDS_CHANGES",
+  "build_tests": {
+    "command": "gradle clean build",
+    "exit_code": 0,
+    "build_result": "PASS",
+    "test_result": "PASS",
+    "details": "Gradle 'clean build' completed with BUILD SUCCESSFUL; :compileJava, :test, and :check all executed. The passing tests exercise only the existing Python publish script (tests/test_publish_pr_review.py). No Java unit or integration tests were added for the new GlobalPollingConfigController, so a green build does not indicate the feature itself is tested."
+  },
+  "requirement_alignment": {
+    "requested": "Add PUT /api/config/global-polling-interval accepting pollingIntervalSeconds. Valid range 60-900s inclusive; invalid values return HTTP 400 without overwriting the last valid value; missing/null pollingIntervalSeconds (requirement GLOBAL-INTERVAL-MISSING-VALUE) must return HTTP 400 and preserve the previous value, not HTTP 500. Default 300s. Controller must remain stateless and delegate to a service layer. Existing customer preference APIs unchanged. Unit and integration tests required.",
+    "implemented": "Adds GlobalPollingConfigController with a PUT /api/config/global-polling-interval endpoint. The controller holds the interval in a mutable field (default 300), performs no validation, and overwrites the stored value directly from the request body. No service layer, no range check, no missing/null handling, and no Java tests.",
+    "match": "NO"
+  },
+  "test_coverage": "No Java tests were added. Missing required unit tests: value exactly 60, exactly 900, below 60, above 900, valid update changes stored value, invalid update preserves previous value, and missing/null pollingIntervalSeconds preserves previous value. Missing required integration tests: valid PUT returns 200, invalid value returns 400, missing/null returns 400 (not 500). The only new tests are Python tests for the review publish script, which are unrelated to the feature.",
+  "findings": [
+    {
+      "severity": "BLOCKING",
+      "title": "Controller holds mutable configuration state instead of delegating to a service",
+      "requirement": "Architecture rules and functional requirements state the controller must remain stateless and the global polling interval must be owned by the service layer (GlobalPollingConfigController -> GlobalPollingConfigService -> Configuration Store). Controllers must not hold mutable application config in fields.",
+      "implementation": "GlobalPollingConfigController stores the value in a private mutable field `globalPollingIntervalSeconds` and mutates it directly in the handler. No service layer exists.",
+      "why_it_matters": "Directly violates the documented stateless-controller and service-ownership architecture rules and the issue's delegation requirement.",
+      "file": "src/main/java/com/example/preferences/controller/GlobalPollingConfigController.java"
+    },
+    {
+      "severity": "BLOCKING",
+      "title": "No range validation; out-of-range values are accepted",
+      "requirement": "Only values from 60 through 900 seconds inclusive are valid. Invalid values must return HTTP 400 and must not change the existing value. Validation belongs in the service layer.",
+      "implementation": "The handler performs no validation and stores whatever value is supplied, returning it with HTTP 200.",
+      "why_it_matters": "Out-of-range values are silently accepted and overwrite the stored interval, violating the validation and value-preservation criteria.",
+      "file": "src/main/java/com/example/preferences/controller/GlobalPollingConfigController.java"
+    },
+    {
+      "severity": "BLOCKING",
+      "title": "Missing/null pollingIntervalSeconds causes a server error and overwrites state (GLOBAL-INTERVAL-MISSING-VALUE)",
+      "requirement": "Requirement GLOBAL-INTERVAL-MISSING-VALUE: a missing or null pollingIntervalSeconds must return HTTP 400, preserve the last valid value, and must not produce a server error.",
+      "implementation": "`request.get(\"pollingIntervalSeconds\")` returns null when absent; assigning it to the primitive `int` field triggers a NullPointerException (HTTP 500), and in no case is 400 returned.",
+      "why_it_matters": "Returns HTTP 500 instead of 400 and fails to preserve the previous value, directly violating the explicitly flagged live-evaluation requirement.",
+      "file": "src/main/java/com/example/preferences/controller/GlobalPollingConfigController.java"
+    },
+    {
+      "severity": "BLOCKING",
+      "title": "Required unit and integration tests for the feature are missing",
+      "requirement": "Testing strategy requires unit tests (boundaries 60/900, below/above range, valid update changes value, invalid update preserves value, missing/null preserves value) and integration tests (valid PUT 200, invalid 400, missing/null 400 not 500). A PR implementing the feature without these tests must be flagged.",
+      "implementation": "No Java tests were added. The only new tests target the Python publish script and do not cover the endpoint.",
+      "why_it_matters": "The feature is incomplete per the testing gates; the passing Gradle build does not validate any of the required behavior.",
+      "file": "src/main/java/com/example/preferences/controller/GlobalPollingConfigController.java"
+    }
+  ],
+  "evidence": [
+    "GitHub PR and diff",
+    "Linked issue #5 acceptance criteria",
+    "Project Knowledge Base (architecture, functional requirements, testing strategy)",
+    "CodeBuild build/test log"
+  ]
+}
