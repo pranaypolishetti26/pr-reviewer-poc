@@ -1,0 +1,16 @@
+[
+  {
+    "name": "search_project_docs",
+    "description": "Searches the project's architecture, requirements, and testing documentation.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "What to search for in the project documentation"
+        }
+      },
+      "required": ["query"]
+    }
+  }
+]

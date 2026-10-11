@@ -11,9 +11,9 @@ The POC supports two demonstrated paths:
 | Customer Preferences service in this repository | Linked GitHub Issue; Jira when referenced | Existing Bedrock Knowledge Base through AgentCore Gateway | `gradle clean build` |
 | Apache Fineract fork | Jira ticket `SCRUM-5` | Existing Fineract files through GitHub MCP at the reviewed commit | Focused `StringUtilTest` Gradle task |
 
-**Verified:** the Fineract run read Jira headlessly inside CodeBuild, detected the intentional acceptance-criteria violation, validated its JSON, and [published a `NEEDS_CHANGES` review](https://github.com/pranaypolishetti26/fineract/pull/1#issuecomment-6099756030). Its CodeBuild result is correctly red because two fixture tests intentionally fail.
+**Verified:** [Fineract PR #2](https://github.com/pranaypolishetti26/fineract/pull/2) demonstrates the complete review cycle: [NEEDS_CHANGES](https://github.com/pranaypolishetti26/fineract/pull/2#issuecomment-6110546956), a [fix commit](https://github.com/pranaypolishetti26/fineract/commit/8ff50682317abb6839d728da3ba0767478449cd0), then a separate [APPROVE comment](https://github.com/pranaypolishetti26/fineract/pull/2#issuecomment-6110602239). Both runs read Jira headlessly and validated their JSON and reviewed SHAs. The corrected revision passed all four focused tests and CodeBuild succeeded; the original comment's body and update timestamp remained unchanged.
 
-This README describes the implementation on `feat/fineract-jira-review`, including the infrastructure in the AWS learning repository, whose GitHub name is [`pranaypolishetti26/aws-practice`](https://github.com/pranaypolishetti26/aws-practice). Resource settings and live results were checked on October 10, 2026. Resource identifiers below are configuration values, not credentials.
+This README describes the reviewer and its consolidated [AgentCore infrastructure](infra/agentcore/README.md). The infrastructure source was brought here from `pranaypolishetti26/aws-practice` so day-to-day work stays in one repository. The full review-history demonstration and infrastructure reconciliation were verified on October 11, 2026. Resource identifiers below are configuration values, not credentials.
 
 ## Contents
 
@@ -23,7 +23,7 @@ This README describes the implementation on `feat/fineract-jira-review`, includi
 - [Choosing acceptance criteria and documentation](#choosing-acceptance-criteria-and-documentation)
 - [How Jira tickets are read](#how-jira-tickets-are-read)
 - [How project documentation is read](#how-project-documentation-is-read)
-- [The AWS learning repository and AgentCore Gateway](#the-aws-learning-repository-and-agentcore-gateway)
+- [AgentCore infrastructure in this repository](#agentcore-infrastructure-in-this-repository)
 - [Secrets, authentication, and permissions](#secrets-authentication-and-permissions)
 - [Setup and running a review](#setup-and-running-a-review)
 - [Structured output and publication](#structured-output-and-publication)
@@ -98,10 +98,11 @@ pr-reviewer-poc/
 ├── demo/                             # Intentional evaluation fixtures and patches
 ├── evals/                            # Rubrics, example reviews, captured observation
 ├── tests/                            # Python workflow/validation checks
+├── infra/agentcore/                   # Gateway CDK project, schemas, Lambda sources, inventory
 └── src/                              # Java Customer Preferences service and tests
 ```
 
-The Fineract application lives in a [separate fork](https://github.com/pranaypolishetti26/fineract), rather than being copied into this repository. The gateway infrastructure lives in `aws-practice/PRReviewAgentcore`.
+The Fineract application lives in a [separate fork](https://github.com/pranaypolishetti26/fineract). Gateway infrastructure and Lambda source are maintained here under [infra/agentcore](infra/agentcore/README.md).
 
 ## The end-to-end review flow
 
@@ -290,59 +291,58 @@ The prefix is owned by the repository documents: `--delete` removes remote objec
 
 Editing this root README does not match the document-sync path filter. Writing this README does not upload or synchronize any S3/Knowledge Base content.
 
-## The AWS learning repository and AgentCore Gateway
+## AgentCore infrastructure in this repository
 
-The infrastructure side is in [`aws-practice/PRReviewAgentcore`](https://github.com/pranaypolishetti26/aws-practice/tree/main/PRReviewAgentcore).
+The reviewer infrastructure is maintained under [infra/agentcore](infra/agentcore/README.md), alongside the CodeBuild workflow and Kiro configuration. It was migrated from `aws-practice/PRReviewAgentcore` at source revision `0f58005978dfa64a9d00453db8ad1c525ce077ee`; the original repository was left unchanged. No AWS deployment, resource recreation, document upload, synchronization, or ingestion was performed for the migration.
 
 | Infrastructure file | Role |
 | --- | --- |
-| [`agentcore/agentcore.json`](https://github.com/pranaypolishetti26/aws-practice/blob/main/PRReviewAgentcore/agentcore/agentcore.json) | Project resource specification and gateway/target declarations |
-| [`agentcore/aws-targets.json`](https://github.com/pranaypolishetti26/aws-practice/blob/main/PRReviewAgentcore/agentcore/aws-targets.json) | Deployment account and region |
-| [`agentcore/cdk/bin/cdk.ts`](https://github.com/pranaypolishetti26/aws-practice/blob/main/PRReviewAgentcore/agentcore/cdk/bin/cdk.ts) | Reads configuration and creates a stack for each deployment target |
-| [`agentcore/cdk/lib/cdk-stack.ts`](https://github.com/pranaypolishetti26/aws-practice/blob/main/PRReviewAgentcore/agentcore/cdk/lib/cdk-stack.ts) | Instantiates `AgentCoreApplication` and `AgentCoreMcp` constructs |
-| [`tools.json`](https://github.com/pranaypolishetti26/aws-practice/blob/main/PRReviewAgentcore/tools.json) | Schema for the original `get_pull_request(pr_number)` Lambda tool |
-| `agentcore/.cli/deployed-state.json` | Recorded gateway endpoint, target IDs, and stack state |
+| [agentcore/agentcore.json](infra/agentcore/agentcore/agentcore.json) | Project specification with both existing Gateway targets |
+| [agentcore/aws-targets.json](infra/agentcore/agentcore/aws-targets.json) | Deployment account and region |
+| [cdk/bin/cdk.ts](infra/agentcore/agentcore/cdk/bin/cdk.ts) | Reads configuration and creates a stack for each deployment target |
+| [cdk/lib/cdk-stack.ts](infra/agentcore/agentcore/cdk/lib/cdk-stack.ts) | Original generated AgentCore CDK constructs |
+| [tools.json](infra/agentcore/tools.json) | Original mock PR tool schema |
+| [project-docs-tools.json](infra/agentcore/project-docs-tools.json) | Exact live documentation search tool schema |
+| [Lambda source](infra/agentcore/lambdas) | Captured implementations for both existing target functions |
+| [deployed-state.json](infra/agentcore/agentcore/.cli/deployed-state.json) | Gateway endpoint, both target IDs, and original stack state |
+| [existing-resources.json](infra/agentcore/existing-resources.json) | Live settings and ownership inventory for the existing Gateway, Lambdas, Knowledge Base, data source, and vector index |
 
-The project was generated with the AgentCore CLI and uses AWS CDK, including `@aws/agentcore-cdk`. Its deployment target is account `018724218019`, region `us-east-2`, and stack `AgentCore-PRReviewAgentcore-default`.
+The project uses AWS CDK and the locked `@aws/agentcore-cdk` dependency. Its project name `PRReviewAgentcore`, account `018724218019`, region `us-east-2`, stack `AgentCore-PRReviewAgentcore-default`, Gateway name, and resource logical IDs are preserved.
 
-The saved project has empty runtime, memory, Knowledge Base, and evaluator arrays. It references an existing Lambda for its gateway target; it does not declare the current documentation Knowledge Base as a managed resource.
+### Configuration and existing resources
 
-### Saved configuration versus live gateway
+The old saved configuration omitted the documentation target. The migrated configuration declares both targets, using their existing Lambda ARNs:
 
-The saved JSON and deployed-state file record only `PullRequestLambdaTarget`. The live gateway also has a documentation target:
-
-| Live target | Lambda | Current reviewer usage |
+| Target | Lambda | Current reviewer usage |
 | --- | --- | --- |
-| `ProjectDocsLambdaTarget` | `search-project-docs` | Enabled for original-service documentation retrieval |
-| `PullRequestLambdaTarget` | `get-pull-request` | Disabled in reviewer MCP settings; real PR data comes from GitHub MCP |
+| `ProjectDocsLambdaTarget` | `search-project-docs` | Original-service documentation retrieval |
+| `PullRequestLambdaTarget` | `get-pull-request` | Disabled; real PR data comes from GitHub MCP |
 
-The public tool name combines the target and tool names: `ProjectDocsLambdaTarget___search_project_docs`. AgentCore converts Lambda targets into MCP-compatible tools; see [AWS's gateway documentation](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway.html).
+The public documentation tool name remains `ProjectDocsLambdaTarget___search_project_docs`. AgentCore exposes Lambda targets as MCP tools; see [AWS's gateway documentation](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway.html).
 
-**The infrastructure repository does not currently contain a complete declaration of the live documentation path.** A fresh deployment from its saved config alone should not be assumed to reproduce the documentation target, Lambda, Knowledge Base, or index. Reconcile those existing resources with the source configuration before redeploying; the README update does not change them.
+Both targets are already managed by the existing CloudFormation stack. Local synthesis preserves all five functional resources and their definitions: Gateway, Gateway IAM role/policy, and two targets. There are no added or removed resources compared with the deployed template; only CDK metadata differs. The tool schemas also preserve their deployed asset contents.
 
-The repository also contains learning scripts such as `pr_agent.py` and `retrieve_kb.py`. `pr_agent.py` demonstrates a separate Nova Micro tool-use loop and references an older Knowledge Base ID, `KOOM8AP06E`. Those scripts are experiments, not the active CodeBuild/Kiro orchestration or the current `UW6ENMRRLS` retrieval path.
+The Lambda functions, Knowledge Base, source bucket, vector index, and their roles remain existing dependencies. Their source/settings are available here, but this CDK stack does not create them or update Lambda code. Runtime, memory, Knowledge Base, and evaluator arrays remain empty. A new-account deployment is not implemented; use the existing resources for this POC.
 
-### Infrastructure inspection and deployment
+The old Nova Micro/tool-use experiments were not imported because they are unrelated to the active Kiro/CodeBuild reviewer and reference an older Knowledge Base. The infrastructure guide records provenance and the current resource ownership boundaries.
 
-Existing resources can be inspected without deploying:
+### Local validation and infrastructure maintenance
+
+From this repository root:
 
 ```sh
-aws bedrock-agentcore-control get-gateway \
-  --gateway-identifier prreviewagentcore-prreviewgateway-6tdiyooexa \
-  --region us-east-2
-
-aws bedrock-agentcore-control list-gateway-targets \
-  --gateway-identifier prreviewagentcore-prreviewgateway-6tdiyooexa \
-  --region us-east-2
-
-aws bedrock-agent get-knowledge-base \
-  --knowledge-base-id UW6ENMRRLS \
-  --region us-east-2
+cd infra/agentcore/agentcore/cdk
+npm ci --ignore-scripts --no-audit --no-fund
+npm run build
+npm test -- --runInBand
+npm run cdk -- synth --no-lookups --quiet
 ```
 
-For infrastructure development, the generated project documents Node.js 20+, AWS credentials, and the AgentCore CLI. Its normal lifecycle includes `agentcore validate`, `agentcore status`, and `agentcore deploy`. Deployment is an infrastructure-changing operation, not a prerequisite for each review. Reuse the existing ready gateway for this POC rather than creating another one.
+These checks compile, test, and synthesize locally without deploying or starting ingestion. The migration test checks existing logical IDs, target names, Lambda ARNs, and the absence of duplicate Lambda, Knowledge Base, or bucket resources. Run commands from the CDK directory because the generated project uses its working directory for configuration discovery.
 
-The live gateway currently uses authorizer type `NONE`, consistent with the saved specification. The documentation Lambda currently has a three-second timeout and a broad `PowerUserRole`. These are POC settings, not a production authentication or least-privilege design. Kiro's read-tool restrictions do not authenticate other callers to that gateway.
+The [infrastructure guide](infra/agentcore/README.md) includes read-only inspection commands, the existing resource inventory, and Lambda maintenance boundaries. The AgentCore CLI is optional and was not installed in the migration environment; CDK build, schema loading, tests, and synthesis were validated directly. Neither infrastructure deployment nor switching repositories is required to run a PR review.
+
+The live Gateway retains authorizer type `NONE`. Its documentation Lambda retains a three-second timeout and the existing `PowerUserRole`; moving their source does not change those POC settings. Kiro's read-tool restrictions do not authenticate other callers to the Gateway.
 
 ## Secrets, authentication, and permissions
 
@@ -413,7 +413,7 @@ The docs-sync role is separate from CodeBuild's role. Bedrock retrieval uses the
 
 The existing CodeBuild project is `kiro-pr-review-poc`, with source `pranaypolishetti26/pr-reviewer-poc`, buildspec `buildspec.yml`, Amazon Linux standard image `6.0`, and `BUILD_GENERAL1_MEDIUM` compute. It uses no build artifacts for these reviews.
 
-Use a workflow source revision containing the Jira/Fineract changes. The verified reviewer revision is `0699592ac13b721db3a958a1f7aab27e4e002d48`; do not assume the default branch already contains the feature branch.
+The Jira/Fineract integration, review-history fix, and consolidated infrastructure are merged into `main` through [PR #8](https://github.com/pranaypolishetti26/pr-reviewer-poc/pull/8), [PR #9](https://github.com/pranaypolishetti26/pr-reviewer-poc/pull/9), and [PR #10](https://github.com/pranaypolishetti26/pr-reviewer-poc/pull/10). Both latest live reviews used workflow revision `cd234c5acaf745b9c111b1f33724a81cf3075e3f`. Select `main` for its latest workflow or that immutable SHA to reproduce the verified workflow.
 
 ### Original repository: webhook path
 
@@ -423,15 +423,15 @@ The historical [demo steps](demo/DEMO-STEPS.md) describe the original fixture. T
 
 ### Fineract: manual run on the existing project
 
-The Fineract draft [PR #1](https://github.com/pranaypolishetti26/fineract/pull/1) references [SCRUM-5](https://pranaypspk26.atlassian.net/browse/SCRUM-5). The existing project can review it through overrides, without adding another CodeBuild project or fork webhook:
+The Fineract draft [PR #2](https://github.com/pranaypolishetti26/fineract/pull/2) references [SCRUM-5](https://pranaypspk26.atlassian.net/browse/SCRUM-5). The existing project can review it through overrides, without adding another CodeBuild project or fork webhook:
 
 ```sh
 aws codebuild start-build \
   --project-name kiro-pr-review-poc \
-  --source-version 0699592ac13b721db3a958a1f7aab27e4e002d48 \
+  --source-version main \
   --environment-variables-override \
     name=GITHUB_REPOSITORY,value=pranaypolishetti26/fineract,type=PLAINTEXT \
-    name=PR_NUMBER,value=1,type=PLAINTEXT \
+    name=PR_NUMBER,value=2,type=PLAINTEXT \
   --timeout-in-minutes-override 15 \
   --region us-east-2 \
   --query build.id \
@@ -583,9 +583,9 @@ The live run read GitHub and Knowledge Base evidence and [published `NEEDS_CHANG
 
 The separate documentation sync had previously ingested the newly merged missing-value requirement. [The existing live-results report](docs/live-e2e-results.md) records those runs, ingestion evidence, and known inaccuracies in some review wording. A correct verdict is not proof of perfect model reasoning.
 
-### Fineract: real Jira acceptance criteria
+### Fineract: initial Jira acceptance-criteria demonstration
 
-The [Fineract fork PR #1](https://github.com/pranaypolishetti26/fineract/pull/1) changes `StringUtil.maskValue` and adds focused JUnit tests. It references [SCRUM-5](https://pranaypspk26.atlassian.net/browse/SCRUM-5):
+The initial revision of [Fineract fork PR #1](https://github.com/pranaypolishetti26/fineract/pull/1) changed `StringUtil.maskValue` and added focused JUnit tests. It referenced [SCRUM-5](https://pranaypspk26.atlassian.net/browse/SCRUM-5). The following table describes that original faulty revision, before the fix:
 
 | Criterion | Expected behavior | Fixture result |
 | --- | --- | --- |
@@ -594,7 +594,7 @@ The [Fineract fork PR #1](https://github.com/pranaypolishetti26/fineract/pull/1)
 | AC3 | Existing nonempty masking behavior is preserved | Satisfied |
 | AC4 | Focused tests assert null, empty, and existing examples | Tests added; empty-input assertions fail as intended |
 
-The reviewed application head is `c9eba66dc5f64e3ff6a8f4bcec2e77c99e538f8e`. CodeBuild run `kiro-pr-review-poc:a8d3d826-ca06-4fab-8a0d-eb7bfc25cad3` verified:
+The original reviewed application head was `c9eba66dc5f64e3ff6a8f4bcec2e77c99e538f8e`. CodeBuild run `kiro-pr-review-poc:a8d3d826-ca06-4fab-8a0d-eb7bfc25cad3` verified:
 
 - Community Jira MCP access in headless CodeBuild.
 - GitHub PR/diff reads, Jira reads, and all configured documentation reads at the pinned head.
@@ -606,6 +606,22 @@ The reviewed application head is `c9eba66dc5f64e3ff6a8f4bcec2e77c99e538f8e`. Cod
 
 The PR remains an evaluation fixture in the fork. No change was made to Apache upstream, and a full Fineract integration-suite pass is not claimed. `demo/fineract-independent-review.json` is an earlier independent local review, not the JSON captured from this final CodeBuild run.
 
+### Fineract: review history preserved through the fix
+
+A fresh [PR #2](https://github.com/pranaypolishetti26/fineract/pull/2), on branch `scrum-5-review-history-demo-20261011`, verified the updated publisher on October 11, 2026. Both runs used the merged `main` workflow at `cd234c5acaf745b9c111b1f33724a81cf3075e3f` and the same SCRUM-5 acceptance criteria.
+
+| Step | Application revision | Result |
+| --- | --- | --- |
+| Initial review | `c9eba66dc5f64e3ff6a8f4bcec2e77c99e538f8e` | Two of four focused tests failed; CodeBuild failed after posting [NEEDS_CHANGES](https://github.com/pranaypolishetti26/fineract/pull/2#issuecomment-6110546956) for AC2 |
+| Fix pushed | [8ff50682317abb6839d728da3ba0767478449cd0](https://github.com/pranaypolishetti26/fineract/commit/8ff50682317abb6839d728da3ba0767478449cd0) | Removed the empty-string shortcut; retained the null guard and unchanged regression tests |
+| Second review | `8ff50682317abb6839d728da3ba0767478449cd0` | All four focused tests passed; CodeBuild succeeded; a separate [APPROVE comment](https://github.com/pranaypolishetti26/fineract/pull/2#issuecomment-6110602239) confirmed all criteria with no findings |
+
+First CodeBuild run: `kiro-pr-review-poc:fae67204-3a56-41b2-b078-fd7d1666d2a1`. Second CodeBuild run: `kiro-pr-review-poc:ea2c0652-dc1c-409d-b32d-69453f4b463c`.
+
+The publisher automatically posted two distinct comments. The first comment's ID, full body, and update timestamp were checked after the second run and remained unchanged; no manual history repair was needed for this PR. The developer fix commit was pushed between the two reviews. The reviewer only reads evidence and returns JSON; the separate publisher posts comments and does not author commits or merge the PR.
+
+Both runs passed headless Jira access, used GitHub and Fineract documentation pinned to their respective reviewed commits, and passed structured JSON and SHA validation. Neither queried the unrelated Knowledge Base. These results cover the focused `StringUtilTest` task, not the full Fineract build or integration suite. The demo PR remains unmerged in the fork.
+
 ## Local tests and review-quality evaluation
 
 Run the credential-free Python checks:
@@ -614,7 +630,7 @@ Run the credential-free Python checks:
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests
 ```
 
-The current implementation has 42 passing checks covering output validation, SHA mismatches, publishing behavior, Jira routing/credential formats, required ticket/document reads, V3 argument envelopes, effective SHA precedence, and read-only probe behavior. Document-sync tests use mocks; running the suite does not upload documents or start ingestion.
+The current implementation has 45 passing checks covering output validation, SHA mismatches, review-history preservation and deduplication, Jira routing/credential formats, required ticket/document reads, V3 argument envelopes, effective SHA precedence, and read-only probe behavior. Document-sync tests use mocks; running the suite does not upload documents or start ingestion. The infrastructure project also has two passing CDK tests; its build and synthesis commands are described above and in the infrastructure guide.
 
 The original Java application can be checked separately with Java 21 and Gradle:
 
@@ -647,7 +663,7 @@ Current limits to keep in mind:
 - Repository/build routing, Jira site/cloud ID, and documentation paths are POC-specific rather than a general onboarding system.
 - Jira criteria are read from descriptions; comments/custom fields are not currently included.
 - Knowledge Base retrieval is not version-pinned, and the Lambda omits source locations from its result.
-- The infrastructure source does not fully describe the live documentation target and uses permissive POC authentication/IAM settings.
+- The consolidated Gateway specification matches the existing functional CloudFormation resources. Lambda and Knowledge Base dependencies remain externally managed; a new-account deployment is not implemented. Existing permissive POC authentication/IAM settings are unchanged.
 - Schema validation cannot prove every explanation or citation is correct; a human should assess consequential findings.
 - Missing acceptance criteria yield `UNVERIFIED`; the validator does not automatically forbid `APPROVE` solely for that value.
 - GitHub does not provide an atomic head-SHA condition for comment writes. A push between the final check and write remains a small race window; concurrent first runs can also create duplicate comments.

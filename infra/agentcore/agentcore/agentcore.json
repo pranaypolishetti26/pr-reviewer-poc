@@ -1,0 +1,61 @@
+{
+  "$schema": "https://schema.agentcore.aws.dev/v1/agentcore.json",
+  "name": "PRReviewAgentcore",
+  "version": 1,
+  "managedBy": "CDK",
+  "tags": {
+    "agentcore:created-by": "agentcore-cli",
+    "agentcore:project-name": "PRReviewAgentcore"
+  },
+  "runtimes": [],
+  "memories": [],
+  "knowledgeBases": [],
+  "credentials": [],
+  "evaluators": [],
+  "onlineEvalConfigs": [],
+  "agentCoreGateways": [
+    {
+      "name": "PRReviewGateway",
+      "protocolType": "None",
+      "description": "Gateway for PRReviewGateway",
+      "targets": [
+        {
+          "name": "PullRequestLambdaTarget",
+          "targetType": "lambdaFunctionArn",
+          "lambdaFunctionArn": {
+            "lambdaArn": "arn:aws:lambda:us-east-2:018724218019:function:get-pull-request",
+            "toolSchemaFile": "tools.json"
+          }
+        },
+        {
+          "name": "ProjectDocsLambdaTarget",
+          "targetType": "lambdaFunctionArn",
+          "lambdaFunctionArn": {
+            "lambdaArn": "arn:aws:lambda:us-east-2:018724218019:function:search-project-docs",
+            "toolSchemaFile": "project-docs-tools.json"
+          }
+        }
+      ],
+      "authorizerType": "NONE",
+      "enableSemanticSearch": false,
+      "exceptionLevel": "NONE"
+    }
+  ],
+  "unassignedTargets": [
+    {
+      "name": "PullRequestLambdaTarget",
+      "targetType": "lambdaFunctionArn",
+      "lambdaFunctionArn": {
+        "lambdaArn": "arn:aws:lambda:us-east-2:018724218019:function:get-pull-request",
+        "toolSchemaFile": "tools.json"
+      }
+    }
+  ],
+  "policyEngines": [],
+  "configBundles": [],
+  "abTests": [],
+  "harnesses": [],
+  "datasets": [],
+  "capacityProviders": [],
+  "payments": []
+}
