@@ -1,0 +1,8 @@
+[
+  {
+    "name": "default",
+    "description": "Default target (us-east-2)",
+    "account": "018724218019",
+    "region": "us-east-2"
+  }
+]

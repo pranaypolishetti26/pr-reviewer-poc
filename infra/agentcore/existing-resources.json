@@ -1,0 +1,126 @@
+{
+  "observedOn": "2026-10-11",
+  "region": "us-east-2",
+  "account": "018724218019",
+  "sourceRepository": "pranaypolishetti26/aws-practice",
+  "sourceRevision": "0f58005978dfa64a9d00453db8ad1c525ce077ee",
+  "stackName": "AgentCore-PRReviewAgentcore-default",
+  "gateway": {
+    "gatewayId": "prreviewagentcore-prreviewgateway-6tdiyooexa",
+    "gatewayArn": "arn:aws:bedrock-agentcore:us-east-2:018724218019:gateway/prreviewagentcore-prreviewgateway-6tdiyooexa",
+    "gatewayUrl": "https://prreviewagentcore-prreviewgateway-6tdiyooexa.gateway.bedrock-agentcore.us-east-2.amazonaws.com",
+    "roleArn": "arn:aws:iam::018724218019:role/AgentCore-PRReviewAgentco-McpGatewayPRReviewGateway-yJydkYdVVsdW",
+    "authorizerType": "NONE",
+    "status": "READY"
+  },
+  "targets": [
+    {
+      "name": "ProjectDocsLambdaTarget",
+      "targetId": "KOL1ZTCAMX",
+      "lambdaArn": "arn:aws:lambda:us-east-2:018724218019:function:search-project-docs",
+      "status": "READY"
+    },
+    {
+      "name": "PullRequestLambdaTarget",
+      "targetId": "ZC4BSSSEUM",
+      "lambdaArn": "arn:aws:lambda:us-east-2:018724218019:function:get-pull-request",
+      "status": "READY"
+    }
+  ],
+  "lambdas": {
+    "search-project-docs": {
+      "FunctionArn": "arn:aws:lambda:us-east-2:018724218019:function:search-project-docs",
+      "Runtime": "python3.14",
+      "Handler": "lambda_function.lambda_handler",
+      "Timeout": 3,
+      "MemorySize": 128,
+      "Role": "arn:aws:iam::018724218019:role/PowerUserRole",
+      "CodeSha256": "D2FHonAvCeiWk9bRn97b7OPlizbsx+7hCcVECrnKnm0=",
+      "environmentKeys": [
+        "KNOWLEDGE_BASE_ID"
+      ],
+      "knowledgeBaseId": "UW6ENMRRLS"
+    },
+    "get-pull-request": {
+      "FunctionArn": "arn:aws:lambda:us-east-2:018724218019:function:get-pull-request",
+      "Runtime": "python3.14",
+      "Handler": "lambda_function.lambda_handler",
+      "Timeout": 3,
+      "MemorySize": 128,
+      "Role": "arn:aws:iam::018724218019:role/PowerUserRole",
+      "CodeSha256": "lpxSdUyHJgaSJFGGs1UCKspy4dNUYOoFd7pc3sBK9S0=",
+      "environmentKeys": []
+    }
+  },
+  "knowledgeBase": {
+    "knowledgeBaseId": "UW6ENMRRLS",
+    "knowledgeBaseArn": "arn:aws:bedrock:us-east-2:018724218019:knowledge-base/UW6ENMRRLS",
+    "name": "pr-reviewer-poc-kb",
+    "roleArn": "arn:aws:iam::018724218019:role/service-role/AmazonBedrockExecutionRoleForKnowledgeBase_m9tqw",
+    "knowledgeBaseConfiguration": {
+      "type": "VECTOR",
+      "vectorKnowledgeBaseConfiguration": {
+        "embeddingModelArn": "arn:aws:bedrock:us-east-2::foundation-model/amazon.titan-embed-text-v2:0",
+        "embeddingModelConfiguration": {
+          "bedrockEmbeddingModelConfiguration": {
+            "dimensions": 1024,
+            "embeddingDataType": "FLOAT32"
+          }
+        }
+      }
+    },
+    "storageConfiguration": {
+      "type": "S3_VECTORS",
+      "s3VectorsConfiguration": {
+        "indexArn": "arn:aws:s3vectors:us-east-2:018724218019:bucket/bedrock-knowledge-base-pknavs/index/bedrock-knowledge-base-default-index"
+      }
+    }
+  },
+  "dataSource": {
+    "dataSourceId": "5H1O8QTP3N",
+    "name": "pr-reviewer-poc-data-source",
+    "dataSourceConfiguration": {
+      "type": "S3",
+      "s3Configuration": {
+        "bucketArn": "arn:aws:s3:::project-docs-018724218019-us-east-2-an",
+        "inclusionPrefixes": [
+          "customer-preferences-service/"
+        ]
+      }
+    },
+    "vectorIngestionConfiguration": {},
+    "dataDeletionPolicy": "DELETE"
+  },
+  "cloudFormationResources": [
+    {
+      "logicalId": "CDKMetadata",
+      "physicalId": "fa7320f0-c0c7-11f1-a71f-0684e93a2c3f",
+      "type": "AWS::CDK::Metadata"
+    },
+    {
+      "logicalId": "McpGatewayPRReviewGateway90331AB1",
+      "physicalId": "prreviewagentcore-prreviewgateway-6tdiyooexa",
+      "type": "AWS::BedrockAgentCore::Gateway"
+    },
+    {
+      "logicalId": "McpGatewayPRReviewGatewayRole96BE901A",
+      "physicalId": "AgentCore-PRReviewAgentco-McpGatewayPRReviewGateway-yJydkYdVVsdW",
+      "type": "AWS::IAM::Role"
+    },
+    {
+      "logicalId": "McpGatewayPRReviewGatewayRoleDefaultPolicy69E338D7",
+      "physicalId": "Agent-McpGa-ztPWvt5uKzK7",
+      "type": "AWS::IAM::Policy"
+    },
+    {
+      "logicalId": "McpGatewayPRReviewGatewayTargetProjectDocsLambdaTargetA0647802",
+      "physicalId": "prreviewagentcore-prreviewgateway-6tdiyooexa|KOL1ZTCAMX",
+      "type": "AWS::BedrockAgentCore::GatewayTarget"
+    },
+    {
+      "logicalId": "McpGatewayPRReviewGatewayTargetPullRequestLambdaTargetC50B8027",
+      "physicalId": "prreviewagentcore-prreviewgateway-6tdiyooexa|ZC4BSSSEUM",
+      "type": "AWS::BedrockAgentCore::GatewayTarget"
+    }
+  ]
+}
