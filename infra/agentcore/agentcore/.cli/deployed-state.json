@@ -1,0 +1,27 @@
+{
+  "targets": {
+    "default": {
+      "resources": {
+        "mcp": {
+          "gateways": {
+            "PRReviewGateway": {
+              "gatewayId": "prreviewagentcore-prreviewgateway-6tdiyooexa",
+              "gatewayArn": "arn:aws:bedrock-agentcore:us-east-2:018724218019:gateway/prreviewagentcore-prreviewgateway-6tdiyooexa",
+              "gatewayUrl": "https://prreviewagentcore-prreviewgateway-6tdiyooexa.gateway.bedrock-agentcore.us-east-2.amazonaws.com",
+              "targets": {
+                "PullRequestLambdaTarget": {
+                  "targetId": "ZC4BSSSEUM"
+                },
+                "ProjectDocsLambdaTarget": {
+                  "targetId": "KOL1ZTCAMX"
+                }
+              }
+            }
+          }
+        },
+        "stackName": "AgentCore-PRReviewAgentcore-default",
+        "deployHash": "9c016cabb86b4c04"
+      }
+    }
+  }
+}

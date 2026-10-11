@@ -13,7 +13,7 @@ The POC supports two demonstrated paths:
 
 **Verified:** the Fineract run read Jira headlessly inside CodeBuild, detected the intentional acceptance-criteria violation, validated its JSON, and [published a `NEEDS_CHANGES` review](https://github.com/pranaypolishetti26/fineract/pull/1#issuecomment-6099756030). Its CodeBuild result is correctly red because two fixture tests intentionally fail.
 
-This README describes the implementation on `feat/fineract-jira-review`, including the infrastructure in the AWS learning repository, whose GitHub name is [`pranaypolishetti26/aws-practice`](https://github.com/pranaypolishetti26/aws-practice). Resource settings and live results were checked on October 10, 2026. Resource identifiers below are configuration values, not credentials.
+This README describes the reviewer and its consolidated [AgentCore infrastructure](infra/agentcore/README.md). The infrastructure source was brought here from `pranaypolishetti26/aws-practice` so day-to-day work stays in one repository. Review demonstrations were checked on October 10, 2026; infrastructure was reconciled with the live deployment on October 11, 2026. Resource identifiers below are configuration values, not credentials.
 
 ## Contents
 
@@ -23,7 +23,7 @@ This README describes the implementation on `feat/fineract-jira-review`, includi
 - [Choosing acceptance criteria and documentation](#choosing-acceptance-criteria-and-documentation)
 - [How Jira tickets are read](#how-jira-tickets-are-read)
 - [How project documentation is read](#how-project-documentation-is-read)
-- [The AWS learning repository and AgentCore Gateway](#the-aws-learning-repository-and-agentcore-gateway)
+- [AgentCore infrastructure in this repository](#agentcore-infrastructure-in-this-repository)
 - [Secrets, authentication, and permissions](#secrets-authentication-and-permissions)
 - [Setup and running a review](#setup-and-running-a-review)
 - [Structured output and publication](#structured-output-and-publication)
@@ -98,10 +98,11 @@ pr-reviewer-poc/
 ├── demo/                             # Intentional evaluation fixtures and patches
 ├── evals/                            # Rubrics, example reviews, captured observation
 ├── tests/                            # Python workflow/validation checks
+├── infra/agentcore/                   # Gateway CDK project, schemas, Lambda sources, inventory
 └── src/                              # Java Customer Preferences service and tests
 ```
 
-The Fineract application lives in a [separate fork](https://github.com/pranaypolishetti26/fineract), rather than being copied into this repository. The gateway infrastructure lives in `aws-practice/PRReviewAgentcore`.
+The Fineract application lives in a [separate fork](https://github.com/pranaypolishetti26/fineract). Gateway infrastructure and Lambda source are maintained here under [infra/agentcore](infra/agentcore/README.md).
 
 ## The end-to-end review flow
 
@@ -290,59 +291,58 @@ The prefix is owned by the repository documents: `--delete` removes remote objec
 
 Editing this root README does not match the document-sync path filter. Writing this README does not upload or synchronize any S3/Knowledge Base content.
 
-## The AWS learning repository and AgentCore Gateway
+## AgentCore infrastructure in this repository
 
-The infrastructure side is in [`aws-practice/PRReviewAgentcore`](https://github.com/pranaypolishetti26/aws-practice/tree/main/PRReviewAgentcore).
+The reviewer infrastructure is maintained under [infra/agentcore](infra/agentcore/README.md), alongside the CodeBuild workflow and Kiro configuration. It was migrated from `aws-practice/PRReviewAgentcore` at source revision `0f58005978dfa64a9d00453db8ad1c525ce077ee`; the original repository was left unchanged. No AWS deployment, resource recreation, document upload, synchronization, or ingestion was performed for the migration.
 
 | Infrastructure file | Role |
 | --- | --- |
-| [`agentcore/agentcore.json`](https://github.com/pranaypolishetti26/aws-practice/blob/main/PRReviewAgentcore/agentcore/agentcore.json) | Project resource specification and gateway/target declarations |
-| [`agentcore/aws-targets.json`](https://github.com/pranaypolishetti26/aws-practice/blob/main/PRReviewAgentcore/agentcore/aws-targets.json) | Deployment account and region |
-| [`agentcore/cdk/bin/cdk.ts`](https://github.com/pranaypolishetti26/aws-practice/blob/main/PRReviewAgentcore/agentcore/cdk/bin/cdk.ts) | Reads configuration and creates a stack for each deployment target |
-| [`agentcore/cdk/lib/cdk-stack.ts`](https://github.com/pranaypolishetti26/aws-practice/blob/main/PRReviewAgentcore/agentcore/cdk/lib/cdk-stack.ts) | Instantiates `AgentCoreApplication` and `AgentCoreMcp` constructs |
-| [`tools.json`](https://github.com/pranaypolishetti26/aws-practice/blob/main/PRReviewAgentcore/tools.json) | Schema for the original `get_pull_request(pr_number)` Lambda tool |
-| `agentcore/.cli/deployed-state.json` | Recorded gateway endpoint, target IDs, and stack state |
+| [agentcore/agentcore.json](infra/agentcore/agentcore/agentcore.json) | Project specification with both existing Gateway targets |
+| [agentcore/aws-targets.json](infra/agentcore/agentcore/aws-targets.json) | Deployment account and region |
+| [cdk/bin/cdk.ts](infra/agentcore/agentcore/cdk/bin/cdk.ts) | Reads configuration and creates a stack for each deployment target |
+| [cdk/lib/cdk-stack.ts](infra/agentcore/agentcore/cdk/lib/cdk-stack.ts) | Original generated AgentCore CDK constructs |
+| [tools.json](infra/agentcore/tools.json) | Original mock PR tool schema |
+| [project-docs-tools.json](infra/agentcore/project-docs-tools.json) | Exact live documentation search tool schema |
+| [Lambda source](infra/agentcore/lambdas) | Captured implementations for both existing target functions |
+| [deployed-state.json](infra/agentcore/agentcore/.cli/deployed-state.json) | Gateway endpoint, both target IDs, and original stack state |
+| [existing-resources.json](infra/agentcore/existing-resources.json) | Live settings and ownership inventory for the existing Gateway, Lambdas, Knowledge Base, data source, and vector index |
 
-The project was generated with the AgentCore CLI and uses AWS CDK, including `@aws/agentcore-cdk`. Its deployment target is account `018724218019`, region `us-east-2`, and stack `AgentCore-PRReviewAgentcore-default`.
+The project uses AWS CDK and the locked `@aws/agentcore-cdk` dependency. Its project name `PRReviewAgentcore`, account `018724218019`, region `us-east-2`, stack `AgentCore-PRReviewAgentcore-default`, Gateway name, and resource logical IDs are preserved.
 
-The saved project has empty runtime, memory, Knowledge Base, and evaluator arrays. It references an existing Lambda for its gateway target; it does not declare the current documentation Knowledge Base as a managed resource.
+### Configuration and existing resources
 
-### Saved configuration versus live gateway
+The old saved configuration omitted the documentation target. The migrated configuration declares both targets, using their existing Lambda ARNs:
 
-The saved JSON and deployed-state file record only `PullRequestLambdaTarget`. The live gateway also has a documentation target:
-
-| Live target | Lambda | Current reviewer usage |
+| Target | Lambda | Current reviewer usage |
 | --- | --- | --- |
-| `ProjectDocsLambdaTarget` | `search-project-docs` | Enabled for original-service documentation retrieval |
-| `PullRequestLambdaTarget` | `get-pull-request` | Disabled in reviewer MCP settings; real PR data comes from GitHub MCP |
+| `ProjectDocsLambdaTarget` | `search-project-docs` | Original-service documentation retrieval |
+| `PullRequestLambdaTarget` | `get-pull-request` | Disabled; real PR data comes from GitHub MCP |
 
-The public tool name combines the target and tool names: `ProjectDocsLambdaTarget___search_project_docs`. AgentCore converts Lambda targets into MCP-compatible tools; see [AWS's gateway documentation](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway.html).
+The public documentation tool name remains `ProjectDocsLambdaTarget___search_project_docs`. AgentCore exposes Lambda targets as MCP tools; see [AWS's gateway documentation](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/gateway.html).
 
-**The infrastructure repository does not currently contain a complete declaration of the live documentation path.** A fresh deployment from its saved config alone should not be assumed to reproduce the documentation target, Lambda, Knowledge Base, or index. Reconcile those existing resources with the source configuration before redeploying; the README update does not change them.
+Both targets are already managed by the existing CloudFormation stack. Local synthesis preserves all five functional resources and their definitions: Gateway, Gateway IAM role/policy, and two targets. There are no added or removed resources compared with the deployed template; only CDK metadata differs. The tool schemas also preserve their deployed asset contents.
 
-The repository also contains learning scripts such as `pr_agent.py` and `retrieve_kb.py`. `pr_agent.py` demonstrates a separate Nova Micro tool-use loop and references an older Knowledge Base ID, `KOOM8AP06E`. Those scripts are experiments, not the active CodeBuild/Kiro orchestration or the current `UW6ENMRRLS` retrieval path.
+The Lambda functions, Knowledge Base, source bucket, vector index, and their roles remain existing dependencies. Their source/settings are available here, but this CDK stack does not create them or update Lambda code. Runtime, memory, Knowledge Base, and evaluator arrays remain empty. A new-account deployment is not implemented; use the existing resources for this POC.
 
-### Infrastructure inspection and deployment
+The old Nova Micro/tool-use experiments were not imported because they are unrelated to the active Kiro/CodeBuild reviewer and reference an older Knowledge Base. The infrastructure guide records provenance and the current resource ownership boundaries.
 
-Existing resources can be inspected without deploying:
+### Local validation and infrastructure maintenance
+
+From this repository root:
 
 ```sh
-aws bedrock-agentcore-control get-gateway \
-  --gateway-identifier prreviewagentcore-prreviewgateway-6tdiyooexa \
-  --region us-east-2
-
-aws bedrock-agentcore-control list-gateway-targets \
-  --gateway-identifier prreviewagentcore-prreviewgateway-6tdiyooexa \
-  --region us-east-2
-
-aws bedrock-agent get-knowledge-base \
-  --knowledge-base-id UW6ENMRRLS \
-  --region us-east-2
+cd infra/agentcore/agentcore/cdk
+npm ci --ignore-scripts --no-audit --no-fund
+npm run build
+npm test -- --runInBand
+npm run cdk -- synth --no-lookups --quiet
 ```
 
-For infrastructure development, the generated project documents Node.js 20+, AWS credentials, and the AgentCore CLI. Its normal lifecycle includes `agentcore validate`, `agentcore status`, and `agentcore deploy`. Deployment is an infrastructure-changing operation, not a prerequisite for each review. Reuse the existing ready gateway for this POC rather than creating another one.
+These checks compile, test, and synthesize locally without deploying or starting ingestion. The migration test checks existing logical IDs, target names, Lambda ARNs, and the absence of duplicate Lambda, Knowledge Base, or bucket resources. Run commands from the CDK directory because the generated project uses its working directory for configuration discovery.
 
-The live gateway currently uses authorizer type `NONE`, consistent with the saved specification. The documentation Lambda currently has a three-second timeout and a broad `PowerUserRole`. These are POC settings, not a production authentication or least-privilege design. Kiro's read-tool restrictions do not authenticate other callers to that gateway.
+The [infrastructure guide](infra/agentcore/README.md) includes read-only inspection commands, the existing resource inventory, and Lambda maintenance boundaries. The AgentCore CLI is optional and was not installed in the migration environment; CDK build, schema loading, tests, and synthesis were validated directly. Neither infrastructure deployment nor switching repositories is required to run a PR review.
+
+The live Gateway retains authorizer type `NONE`. Its documentation Lambda retains a three-second timeout and the existing `PowerUserRole`; moving their source does not change those POC settings. Kiro's read-tool restrictions do not authenticate other callers to the Gateway.
 
 ## Secrets, authentication, and permissions
 
@@ -647,7 +647,7 @@ Current limits to keep in mind:
 - Repository/build routing, Jira site/cloud ID, and documentation paths are POC-specific rather than a general onboarding system.
 - Jira criteria are read from descriptions; comments/custom fields are not currently included.
 - Knowledge Base retrieval is not version-pinned, and the Lambda omits source locations from its result.
-- The infrastructure source does not fully describe the live documentation target and uses permissive POC authentication/IAM settings.
+- The consolidated Gateway specification matches the existing functional CloudFormation resources. Lambda and Knowledge Base dependencies remain externally managed; a new-account deployment is not implemented. Existing permissive POC authentication/IAM settings are unchanged.
 - Schema validation cannot prove every explanation or citation is correct; a human should assess consequential findings.
 - Missing acceptance criteria yield `UNVERIFIED`; the validator does not automatically forbid `APPROVE` solely for that value.
 - GitHub does not provide an atomic head-SHA condition for comment writes. A push between the final check and write remains a small race window; concurrent first runs can also create duplicate comments.
