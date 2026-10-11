@@ -1,4 +1,4 @@
-"""Validate Kiro's review, then create or update the publisher's PR comment."""
+"""Validate Kiro's review and append it to the PR without replacing review history."""
 
 import json
 import os
@@ -281,30 +281,30 @@ def publish_comment(repository, pr_number, token, body, expected_sha):
     author_id = github_request("GET", "/user", token)["id"]
     comments_path = f"/repos/{repository}/issues/{pr_number}/comments"
     page = 1
-    comment_id = None
+    matching_comment = None
     while True:
         comments = github_request("GET", f"{comments_path}?per_page=100&page={page}", token)
         for comment in comments:
             existing_body = comment.get("body") or ""
-            # Also migrate comments created by the earlier workflow, without a marker.
+            # Identical reruns are idempotent, including older unmarked reviews.
+            # Every distinct review is appended; existing history is never edited.
             if comment["user"]["id"] == author_id and (
                 existing_body.startswith(MARKER)
                 or existing_body.startswith("## Kiro PR Review\n")
-            ):
-                comment_id = comment["id"]
+            ) and existing_body.removeprefix(MARKER + "\n") == body.removeprefix(MARKER + "\n"):
+                matching_comment = comment
                 break
-        if comment_id is not None or len(comments) < 100:
+        if matching_comment is not None or len(comments) < 100:
             break
         page += 1
-    # Check after comment discovery, immediately before either GitHub write.
+    # Check after comment discovery, immediately before publishing or deduplicating.
     current_sha = get_head_sha(repository, pr_number, token)
     if current_sha != expected_sha:
         raise StaleReviewError(
             f"STALE_REVIEW: reviewed {expected_sha}, current PR head is {current_sha}; "
-            "review discarded, no comment posted or updated")
-    if comment_id is not None:
-        return github_request("PATCH", f"/repos/{repository}/issues/comments/{comment_id}",
-                              token, {"body": body})
+            "review discarded, no comment posted")
+    if matching_comment is not None:
+        return matching_comment
     return github_request("POST", comments_path, token, {"body": body})
 
 

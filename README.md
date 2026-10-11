@@ -2,7 +2,7 @@
 
 **An end-to-end pull request reviewer that compares code changes with real acceptance criteria, project documentation, and actual build results.**
 
-AWS CodeBuild runs the application checks and Kiro reviewer. Kiro reads evidence through approved MCP tools and returns structured JSON. A separate Python publisher validates that output, checks that the PR still points to the reviewed commit, and creates or updates a GitHub comment through the REST API.
+AWS CodeBuild runs the application checks and Kiro reviewer. Kiro reads evidence through approved MCP tools and returns structured JSON. A separate Python publisher validates that output, checks that the PR still points to the reviewed commit, and appends a GitHub comment through the REST API while preserving earlier reviews.
 
 The POC supports two demonstrated paths:
 
@@ -53,7 +53,7 @@ flowchart TD
     Kiro --> JSON[Structured review JSON]
     JSON --> Guard[Validate schema, evidence reads, and SHA]
     Guard --> Publisher[Python GitHub REST publisher]
-    Publisher --> Comment[Create or update PR comment]
+    Publisher --> Comment[Append PR review comment]
 ```
 
 The context selects which documentation connection is active. Fineract uses GitHub repository files and disables `project-knowledge`; the original service uses the Knowledge Base. Jira is enabled only when ticket keys are present.
@@ -116,7 +116,7 @@ The Fineract application lives in a [separate fork](https://github.com/pranaypol
 9. **Run the selected Gradle task.** Output is captured in `/tmp/pr-reviewer-gradle.log`. A failure is recorded rather than immediately stopping the review. For Fineract, the existing CI memory-budget script applies `MAX_HEAP=2g` and `WORKERS_MAX=1`.
 10. **Run Kiro outside the application checkout.** CodeBuild supplies the context, head SHA, exact command, exit code, and captured build output through stdin. Kiro reads PR evidence, requirements, and documentation through MCP.
 11. **Extract and validate the review.** The Python helper extracts the final JSON from Kiro's ACP stream, checks required successful reads, validates the schema and build status, and verifies the review SHA.
-12. **Publish through REST.** The publisher discovers its existing marked comment, rechecks the live PR head immediately before the write, and creates or updates the comment. A failed Gradle task still causes CodeBuild to exit nonzero after a valid review is published.
+12. **Publish through REST.** The publisher checks for an identical review, rechecks the live PR head, and appends a new comment for a distinct review. Identical reruns reuse the existing comment without editing it. A failed Gradle task still causes CodeBuild to exit nonzero after a valid review is published.
 
 The Kiro invocation is:
 
@@ -513,7 +513,7 @@ Schema checks verify structure and consistency, not the semantic truth of every 
 
 The head is checked during setup, after application checkout, in the review JSON, and again immediately before the GitHub write. If the final head differs, the publisher removes the saved review JSON, logs a stale-review error, exits with code 3, and leaves GitHub comments unchanged.
 
-The publisher uses the token owner's GitHub user ID to find that account's comment marked `<!-- kiro-pr-reviewer -->`. It updates that comment on sequential reruns, or creates one if none exists. It can migrate that account's older comment beginning `## Kiro PR Review`. Other accounts' comments are left untouched.
+The publisher appends a new comment for every distinct review, preserving the PR history: `NEEDS_CHANGES`, the developer's fix commit, then `APPROVE`. It never edits an earlier review or changes commits. An identical rerun by the same token owner reuses the existing comment without a write, including older unmarked reviews beginning `## Kiro PR Review`. A changed review, even for the same commit, gets its own comment. Other accounts' comments are left untouched, and the final head-SHA check still applies to deduplicated runs.
 
 Publication uses GitHub's **Issue comment REST API** for the PR conversation. It does not submit a formal GitHub `APPROVE`/`REQUEST_CHANGES` review, change code, or merge the PR.
 
@@ -579,7 +579,7 @@ The helpers emit bounded status metadata rather than dumping credentials, servic
 
 [Issue #5](https://github.com/pranaypolishetti26/pr-reviewer-poc/issues/5) defines the global polling interval feature. [PR #6](https://github.com/pranaypolishetti26/pr-reviewer-poc/pull/6) is an intentionally flawed fixture.
 
-The live run read GitHub and Knowledge Base evidence and [published `NEEDS_CHANGES`](https://github.com/pranaypolishetti26/pr-reviewer-poc/pull/6#issuecomment-6098972402) despite passing Gradle checks. Findings included mutable controller state, missing range/HTTP 400 validation, missing/null handling, and absent feature tests. A sequential rerun updated the same marked comment.
+The live run read GitHub and Knowledge Base evidence and [published `NEEDS_CHANGES`](https://github.com/pranaypolishetti26/pr-reviewer-poc/pull/6#issuecomment-6098972402) despite passing Gradle checks. Findings included mutable controller state, missing range/HTTP 400 validation, missing/null handling, and absent feature tests. A sequential rerun updated the same marked comment under the original publisher behavior; distinct reviews now append separate comments.
 
 The separate documentation sync had previously ingested the newly merged missing-value requirement. [The existing live-results report](docs/live-e2e-results.md) records those runs, ingestion evidence, and known inaccuracies in some review wording. A correct verdict is not proof of perfect model reasoning.
 

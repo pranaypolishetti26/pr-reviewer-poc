@@ -203,23 +203,60 @@ class ReviewTests(unittest.TestCase):
             publisher.publish_comment("owner/repo", "42", "token", "new review", SHA)
             self.assertEqual(api.call_args.args[:2], ("POST", "/repos/owner/repo/issues/42/comments"))
 
-    def test_update_existing_and_legacy_comments(self):
-        for body in (publisher.MARKER + "\nold", "## Kiro PR Review\nold"):
+    def test_identical_existing_and_legacy_reviews_are_not_edited(self):
+        new_body = publisher.render_comment(review())
+        for body in (new_body, new_body.removeprefix(publisher.MARKER + "\n")):
+            existing = {"id": 12, "user": {"id": 4}, "body": body}
             with patch.object(publisher, "github_request", side_effect=[
-                {"id": 4}, [{"id": 12, "user": {"id": 4}, "body": body}], {"head": {"sha": SHA}}, {"id": 12}
+                {"id": 4}, [existing], {"head": {"sha": SHA}}
             ]) as api:
-                publisher.publish_comment("owner/repo", "42", "token", "updated review", SHA)
-                self.assertEqual(api.call_args.args[:2], ("PATCH", "/repos/owner/repo/issues/comments/12"))
+                result = publisher.publish_comment("owner/repo", "42", "token", new_body, SHA)
+                self.assertEqual(result, existing)
+                self.assertTrue(all(call.args[0] == "GET" for call in api.call_args_list))
+
+    def test_distinct_reviews_preserve_prior_comments(self):
+        old_body = publisher.render_comment(review(1))
+        for updated in (review(), {**review(1), "head_sha": NEW_SHA},
+                        {**review(1), "test_coverage": "Additional tests reviewed"}):
+            with self.subTest(sha=updated["head_sha"], verdict=updated["verdict"]):
+                new_body = publisher.render_comment(updated)
+                with patch.object(publisher, "github_request", side_effect=[
+                    {"id": 4}, [{"id": 12, "user": {"id": 4}, "body": old_body}],
+                    {"head": {"sha": updated["head_sha"]}}, {"id": 13}
+                ]) as api:
+                    publisher.publish_comment("owner/repo", "42", "token", new_body, updated["head_sha"])
+                    self.assertEqual(api.call_args.args[:2], ("POST", "/repos/owner/repo/issues/42/comments"))
+                    self.assertEqual(api.call_args.args[3], {"body": new_body})
+                    self.assertNotIn("PATCH", [call.args[0] for call in api.call_args_list])
+
+    def test_other_author_identical_review_does_not_suppress_publication(self):
+        body = publisher.render_comment(review())
+        with patch.object(publisher, "github_request", side_effect=[
+            {"id": 4}, [{"id": 12, "user": {"id": 9}, "body": body}],
+            {"head": {"sha": SHA}}, {"id": 13}
+        ]) as api:
+            publisher.publish_comment("owner/repo", "42", "token", body, SHA)
+            self.assertEqual(api.call_args.args[0], "POST")
 
     def test_existing_comment_on_second_page(self):
+        body = publisher.render_comment(review())
         first_page = [{"id": i, "user": {"id": 9}, "body": "Other"} for i in range(100)]
         with patch.object(publisher, "github_request", side_effect=[
             {"id": 4}, first_page,
-            [{"id": 101, "user": {"id": 4}, "body": publisher.MARKER}], {"head": {"sha": SHA}}, {"id": 101}
+            [{"id": 101, "user": {"id": 4}, "body": body}], {"head": {"sha": SHA}}
         ]) as api:
-            publisher.publish_comment("owner/repo", "42", "token", "updated", SHA)
+            publisher.publish_comment("owner/repo", "42", "token", body, SHA)
             self.assertIn("page=2", api.call_args_list[2].args[1])
-            self.assertEqual(api.call_args.args[0], "PATCH")
+            self.assertTrue(all(call.args[0] == "GET" for call in api.call_args_list))
+
+    def test_stale_head_is_rejected_even_for_an_identical_review(self):
+        body = publisher.render_comment(review())
+        with patch.object(publisher, "github_request", side_effect=[
+            {"id": 4}, [{"id": 12, "user": {"id": 4}, "body": body}], {"head": {"sha": NEW_SHA}}
+        ]) as api:
+            with self.assertRaises(publisher.StaleReviewError):
+                publisher.publish_comment("owner/repo", "42", "token", body, SHA)
+            self.assertTrue(all(call.args[0] == "GET" for call in api.call_args_list))
 
     def test_api_failure_does_not_fall_back_to_create(self):
         with patch.object(publisher, "github_request", side_effect=[{"id": 4}, OSError("unavailable")]) as api:
