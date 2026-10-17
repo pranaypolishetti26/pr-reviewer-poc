@@ -9,7 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class PreferenceService {
     public static final int MIN_POLLING_INTERVAL_SECONDS = 30;
-    public static final int MAX_POLLING_INTERVAL_SECONDS = 3600;
+    public static final int MAX_POLLING_INTERVAL_SECONDS = 900;
 
     private final Map<String, Integer> pollingIntervals = new ConcurrentHashMap<>();
 
